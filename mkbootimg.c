@@ -66,11 +66,11 @@ int usage(void)
             "       [ --board <boardname> ]\n"
             "       [ --base <address> ]\n"
             "       [ --pagesize <pagesize> ]\n"
+            "       [ --dt <filename> ]\n"
             "       [ --kernel_offset <base offset> ]\n"
             "       [ --ramdisk_offset <base offset> ]\n"
             "       [ --second_offset <base offset> ]\n"
             "       [ --tags_offset <base offset> ]\n"
-            "       [ --dt <filename> ]\n"
             "       [ --id ]\n"
             "       -o|--output <filename>\n"
             );
@@ -315,6 +315,10 @@ int main(int argc, char **argv)
         print_id((uint8_t *) hdr.id, sizeof(hdr.id));
     }
 
+    if(dt_data) {
+        if(write(fd, dt_data, hdr.dt_size) != hdr.dt_size) goto fail;
+        if(write_padding(fd, pagesize, hdr.dt_size)) goto fail;
+    }
     return 0;
 
 fail:
