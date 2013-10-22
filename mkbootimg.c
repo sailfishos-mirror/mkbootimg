@@ -65,7 +65,10 @@ int usage(void)
             "       [ --board <boardname> ]\n"
             "       [ --base <address> ]\n"
             "       [ --pagesize <pagesize> ]\n"
-            "       [ --ramdisk_offset <address> ]\n"
+            "       [ --kerneladdr <address> ]\n"
+            "       [ --ramdiskaddr <address> ]\n"
+            "       [ --secondaddr <address> ]\n"
+            "       [ --tagsaddr <address> ]\n"
             "       [ --dt <filename> ]\n"
             "       -o|--output <filename>\n"
             );
@@ -144,13 +147,13 @@ int main(int argc, char **argv)
             cmdline = val;
         } else if(!strcmp(arg, "--base")) {
             base = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--kernel_offset")) {
+        } else if(!strcmp(arg, "--kerneladdr")) {
             kernel_offset = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--ramdisk_offset")) {
+        } else if(!strcmp(arg, "--ramdiskaddr")) {
             ramdisk_offset = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--second_offset")) {
+        } else if(!strcmp(arg, "--secondaddr")) {
             second_offset = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--tags_offset")) {
+        } else if(!strcmp(arg, "--tagsaddr")) {
             tags_offset = strtoul(val, 0, 16);
         } else if(!strcmp(arg, "--board")) {
             board = val;

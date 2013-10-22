@@ -93,12 +93,19 @@ int main(int argc, char** argv)
         return 1;
     }
     fseek(f, i, SEEK_SET);
-    printf("Android magic found at: %d\n", i);
+    //printf("Android magic found at: %d\n", i);
 
     fread(&header, sizeof(header), 1, f);
     printf("BOARD_KERNEL_CMDLINE %s\n", header.cmdline);
     printf("BOARD_KERNEL_BASE %08x\n", header.kernel_addr - 0x00008000);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
+    printf("BOARD_RAMDISK_ADDR %08x\n", header.ramdisk_addr);
+    if (header.second_size != 0) {
+        printf("BOARD_SECOND_ADDR %08x\n", header.second_addr);
+    }
+    if (header.dt_size != 0) {
+        printf("BOARD_DT_SIZE %d\n", header.dt_size);
+    }
     
     if (pagesize == 0) {
         pagesize = header.page_size;
@@ -123,6 +130,22 @@ int main(int argc, char** argv)
     sprintf(pagesizetmp, "%d", header.page_size);
     write_string_to_file(tmp, pagesizetmp);
     
+    //printf("ramdiskaddr...\n");
+    sprintf(tmp, "%s/%s", directory, basename(filename));
+    strcat(tmp, "-ramdiskaddr");
+    char ramdiskaddrtmp[200];
+    sprintf(ramdiskaddrtmp, "%08x", header.ramdisk_addr);
+    write_string_to_file(tmp, ramdiskaddrtmp);
+
+    if (header.second_size != 0) {
+        //printf("secondaddr...\n");
+        sprintf(tmp, "%s/%s", directory, basename(filename));
+        strcat(tmp, "-secondaddr");
+        char secondaddrtmp[200];
+        sprintf(secondaddrtmp, "%08x", header.second_addr);
+        write_string_to_file(tmp, secondaddrtmp);
+    }
+
     total_read += sizeof(header);
     //printf("total read: %d\n", total_read);
     total_read += read_padding(f, sizeof(header), pagesize);
@@ -149,6 +172,36 @@ int main(int argc, char** argv)
     total_read += header.ramdisk_size;
     fwrite(ramdisk, header.ramdisk_size, 1, r);
     fclose(r);
+    
+    //printf("total read: %d\n", header.ramdisk_size);
+    total_read += read_padding(f, header.ramdisk_size, pagesize);
+    
+    if (header.second_size != 0) {
+        sprintf(tmp, "%s/%s", directory, basename(filename));
+        strcat(tmp, "-second");
+        FILE *s = fopen(tmp, "wb");
+        byte* second = (byte*)malloc(header.second_size);
+        //printf("Reading second...\n");
+        fread(second, header.second_size, 1, f);
+        total_read += header.second_size;
+        fwrite(second, header.second_size, 1, s);
+        fclose(s);
+    }
+    
+    //printf("total read: %d\n", header.second_size);
+    total_read += read_padding(f, header.second_size, pagesize);
+    
+    if (header.dt_size != 0) {
+        sprintf(tmp, "%s/%s", directory, basename(filename));
+        strcat(tmp, "-dtb");
+        FILE *d = fopen(tmp, "wb");
+        byte* dtb = (byte*)malloc(header.dt_size);
+        //printf("Reading dtb...\n");
+        fread(dtb, header.dt_size, 1, f);
+        total_read += header.dt_size;
+        fwrite(dtb, header.dt_size, 1, d);
+        fclose(d);
+    }
     
     fclose(f);
     
