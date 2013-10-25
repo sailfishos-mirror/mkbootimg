@@ -103,6 +103,7 @@ int main(int argc, char** argv)
     if (header.second_size != 0) {
         printf("BOARD_SECOND_ADDR %08x\n", header.second_addr);
     }
+    printf("BOARD_TAGS_ADDR %08x\n", header.tags_addr);
     if (header.dt_size != 0) {
         printf("BOARD_DT_SIZE %d\n", header.dt_size);
     }
@@ -145,6 +146,13 @@ int main(int argc, char** argv)
         sprintf(secondaddrtmp, "%08x", header.second_addr);
         write_string_to_file(tmp, secondaddrtmp);
     }
+
+    //printf("tagsaddr...\n");
+    sprintf(tmp, "%s/%s", directory, basename(filename));
+    strcat(tmp, "-tagsaddr");
+    char tagsaddrtmp[200];
+    sprintf(tagsaddrtmp, "%08x", header.tags_addr);
+    write_string_to_file(tmp, tagsaddrtmp);
 
     total_read += sizeof(header);
     //printf("total read: %d\n", total_read);
