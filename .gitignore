@@ -1,1 +1,6 @@
-*~
+*.o
+*.a
+mkbootimg.exe
+mkbootimg
+unpackbootimg.exe
+unpackbootimg

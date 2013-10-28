@@ -65,10 +65,10 @@ int usage(void)
             "       [ --board <boardname> ]\n"
             "       [ --base <address> ]\n"
             "       [ --pagesize <pagesize> ]\n"
-            "       [ --kerneladdr <address> ]\n"
-            "       [ --ramdiskaddr <address> ]\n"
-            "       [ --secondaddr <address> ]\n"
-            "       [ --tagsaddr <address> ]\n"
+            "       [ --kernel_offset <base offset> ]\n"
+            "       [ --ramdisk_offset <base offset> ]\n"
+            "       [ --second_offset <base offset> ]\n"
+            "       [ --tags_offset <base offset> ]\n"
             "       [ --dt <filename> ]\n"
             "       -o|--output <filename>\n"
             );
@@ -148,13 +148,13 @@ int main(int argc, char **argv)
             cmdline = val;
         } else if(!strcmp(arg, "--base")) {
             base = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--kerneladdr")) {
+        } else if(!strcmp(arg, "--kernel_offset")) {
             kernel_offset = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--ramdiskaddr")) {
+        } else if(!strcmp(arg, "--ramdisk_offset")) {
             ramdisk_offset = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--secondaddr")) {
+        } else if(!strcmp(arg, "--second_offset")) {
             second_offset = strtoul(val, 0, 16);
-        } else if(!strcmp(arg, "--tagsaddr")) {
+        } else if(!strcmp(arg, "--tags_offset")) {
             tags_offset = strtoul(val, 0, 16);
         } else if(!strcmp(arg, "--board")) {
             board = val;

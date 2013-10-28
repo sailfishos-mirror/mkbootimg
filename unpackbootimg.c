@@ -52,6 +52,7 @@ int main(int argc, char** argv)
     char* directory = "./";
     char* filename = NULL;
     int pagesize = 0;
+    int base = 0;
 
     argc--;
     argv++;
@@ -96,14 +97,16 @@ int main(int argc, char** argv)
     //printf("Android magic found at: %d\n", i);
 
     fread(&header, sizeof(header), 1, f);
+    base = header.kernel_addr - 0x00008000;
     printf("BOARD_KERNEL_CMDLINE %s\n", header.cmdline);
     printf("BOARD_KERNEL_BASE %08x\n", header.kernel_addr - 0x00008000);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
-    printf("BOARD_RAMDISK_ADDR %08x\n", header.ramdisk_addr);
+    printf("BOARD_KERNEL_OFFSET %08x\n", header.kernel_addr - base);
+    printf("BOARD_RAMDISK_OFFSET %08x\n", header.ramdisk_addr - base);
     if (header.second_size != 0) {
-        printf("BOARD_SECOND_ADDR %08x\n", header.second_addr);
+        printf("BOARD_SECOND_OFFSET %08x\n", header.second_addr - base);
     }
-    printf("BOARD_TAGS_ADDR %08x\n", header.tags_addr);
+    printf("BOARD_TAGS_OFFSET %08x\n", header.tags_addr - base);
     if (header.dt_size != 0) {
         printf("BOARD_DT_SIZE %d\n", header.dt_size);
     }
@@ -131,28 +134,35 @@ int main(int argc, char** argv)
     sprintf(pagesizetmp, "%d", header.page_size);
     write_string_to_file(tmp, pagesizetmp);
     
-    //printf("ramdiskaddr...\n");
+    //printf("kerneloff...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
-    strcat(tmp, "-ramdiskaddr");
-    char ramdiskaddrtmp[200];
-    sprintf(ramdiskaddrtmp, "%08x", header.ramdisk_addr);
-    write_string_to_file(tmp, ramdiskaddrtmp);
+    strcat(tmp, "-kerneloff");
+    char kernelofftmp[200];
+    sprintf(kernelofftmp, "%08x", header.kernel_addr - base);
+    write_string_to_file(tmp, kernelofftmp);
+    
+    //printf("ramdiskoff...\n");
+    sprintf(tmp, "%s/%s", directory, basename(filename));
+    strcat(tmp, "-ramdiskoff");
+    char ramdiskofftmp[200];
+    sprintf(ramdiskofftmp, "%08x", header.ramdisk_addr - base);
+    write_string_to_file(tmp, ramdiskofftmp);
 
     if (header.second_size != 0) {
-        //printf("secondaddr...\n");
+        //printf("secondoff...\n");
         sprintf(tmp, "%s/%s", directory, basename(filename));
-        strcat(tmp, "-secondaddr");
-        char secondaddrtmp[200];
-        sprintf(secondaddrtmp, "%08x", header.second_addr);
-        write_string_to_file(tmp, secondaddrtmp);
+        strcat(tmp, "-secondoff");
+        char secondofftmp[200];
+        sprintf(secondofftmp, "%08x", header.second_addr - base);
+        write_string_to_file(tmp, secondofftmp);
     }
 
-    //printf("tagsaddr...\n");
+    //printf("tagsoff...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
-    strcat(tmp, "-tagsaddr");
-    char tagsaddrtmp[200];
-    sprintf(tagsaddrtmp, "%08x", header.tags_addr);
-    write_string_to_file(tmp, tagsaddrtmp);
+    strcat(tmp, "-tagsoff");
+    char tagsofftmp[200];
+    sprintf(tagsofftmp, "%08x", header.tags_addr - base);
+    write_string_to_file(tmp, tagsofftmp);
 
     total_read += sizeof(header);
     //printf("total read: %d\n", total_read);
