@@ -10,7 +10,7 @@ endif
 
 EXT = a
 LIB = libmincrypt.$(EXT)
-LIB_OBJS = rsa.o sha.o
+LIB_OBJS = dsa_sig.o p256.o p256_ec.o p256_ecdsa.o rsa.o sha.o sha256.o
 INC  = -I..
 
 all:$(LIB)
