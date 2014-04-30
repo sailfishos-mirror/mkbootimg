@@ -17,10 +17,10 @@ libmincrypt.a:
 	make -C libmincrypt
 
 mkbootimg$(EXE):mkbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt -Werror
 
 mkbootimg-static$(EXE):mkbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt -static
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt -static -Werror
 
 mkbootimg.o:mkbootimg.c
 	$(CROSS_COMPILE)$(CC) -o $@ -c $< -I.
