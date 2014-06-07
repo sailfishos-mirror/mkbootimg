@@ -26,10 +26,10 @@ mkbootimg.o:mkbootimg.c
 	$(CROSS_COMPILE)$(CC) -o $@ -c $< -I.
 
 unpackbootimg$(EXE):unpackbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -Werror
 
 unpackbootimg-static$(EXE):unpackbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^ -static
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -static -Werror
 
 unpackbootimg.o:unpackbootimg.c
 	$(CROSS_COMPILE)$(CC) -o $@ -c $<
