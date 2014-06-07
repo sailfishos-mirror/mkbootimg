@@ -19,10 +19,10 @@ clean:
 	$(RM) $(LIB_OBJS) $(LIB)
 
 $(LIB):$(LIB_OBJS)
-	$(AR) $@ $^
+	$(CROSS_COMPILE)$(AR) $@ $^
 	$(CP) $@ ..
 
 
 %.o:%.c
-	$(CC) -o $@ -c $< $(INC)
+	$(CROSS_COMPILE)$(CC) -o $@ -c $< $(INC)
 

@@ -1,6 +1,5 @@
 *.o
 *.a
-mkbootimg.exe
+*.exe
 mkbootimg
-unpackbootimg.exe
 unpackbootimg

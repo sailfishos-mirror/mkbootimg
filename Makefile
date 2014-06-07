@@ -11,23 +11,31 @@ endif
 
 all:libmincrypt.a mkbootimg$(EXE) unpackbootimg$(EXE)
 
+static:libmincrypt.a mkbootimg-static$(EXE) unpackbootimg-static$(EXE)
+
 libmincrypt.a:
 	make -C libmincrypt
 
 mkbootimg$(EXE):mkbootimg.o
-	$(CC) -o $@ $^ -L. -lmincrypt -static
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt
+
+mkbootimg-static$(EXE):mkbootimg.o
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt -static
 
 mkbootimg.o:mkbootimg.c
-	$(CC) -o $@ -c $< -I.
+	$(CROSS_COMPILE)$(CC) -o $@ -c $< -I.
 
 unpackbootimg$(EXE):unpackbootimg.o
-	$(CC) -o $@ $^ -static
+	$(CROSS_COMPILE)$(CC) -o $@ $^
+
+unpackbootimg-static$(EXE):unpackbootimg.o
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -static
 
 unpackbootimg.o:unpackbootimg.c
-	$(CC) -o $@ -c $< 
+	$(CROSS_COMPILE)$(CC) -o $@ -c $<
 
 clean:
-	$(RM) mkbootimg mkbootimg.o unpackbootimg unpackbootimg.o      mkbootimg.exe    unpackbootimg.exe 
+	$(RM) mkbootimg mkbootimg-static mkbootimg.o unpackbootimg unpackbootimg-static unpackbootimg.o mkbootimg.exe mkbootimg-static.exe unpackbootimg.exe unpackbootimg-static.exe
 	$(RM) libmincrypt.a Makefile.~
 	make -C libmincrypt clean
 
