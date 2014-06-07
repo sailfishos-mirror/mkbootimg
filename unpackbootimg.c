@@ -100,6 +100,7 @@ int main(int argc, char** argv)
     base = header.kernel_addr - 0x00008000;
     printf("BOARD_KERNEL_CMDLINE %s\n", header.cmdline);
     printf("BOARD_KERNEL_BASE %08x\n", header.kernel_addr - 0x00008000);
+    printf("BOARD_NAME %s\n", header.name);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
     printf("BOARD_KERNEL_OFFSET %08x\n", header.kernel_addr - base);
     printf("BOARD_RAMDISK_OFFSET %08x\n", header.ramdisk_addr - base);
@@ -119,6 +120,11 @@ int main(int argc, char** argv)
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-cmdline");
     write_string_to_file(tmp, header.cmdline);
+    
+    //printf("board...\n");
+    sprintf(tmp, "%s/%s", directory, basename(filename));
+    strcat(tmp, "-board");
+    write_string_to_file(tmp, header.name);
     
     //printf("base...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
