@@ -17,22 +17,22 @@ libmincrypt.a:
 	make -C libmincrypt
 
 mkbootimg$(EXE):mkbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt -Werror
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt
 
 mkbootimg-static$(EXE):mkbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt -static -Werror
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt -static
 
 mkbootimg.o:mkbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ -c $< -I.
+	$(CROSS_COMPILE)$(CC) -o $@ -c $< -I. -Werror
 
 unpackbootimg$(EXE):unpackbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^ -Werror
+	$(CROSS_COMPILE)$(CC) -o $@ $^
 
 unpackbootimg-static$(EXE):unpackbootimg.o
-	$(CROSS_COMPILE)$(CC) -o $@ $^ -static -Werror
+	$(CROSS_COMPILE)$(CC) -o $@ $^ -static
 
 unpackbootimg.o:unpackbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ -c $<
+	$(CROSS_COMPILE)$(CC) -o $@ -c $< -Werror
 
 clean:
 	$(RM) mkbootimg mkbootimg-static mkbootimg.o unpackbootimg unpackbootimg-static unpackbootimg.o mkbootimg.exe mkbootimg-static.exe unpackbootimg.exe unpackbootimg-static.exe
