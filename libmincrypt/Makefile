@@ -1,5 +1,5 @@
 CC = gcc
-AR = ar rcv
+AR = ar rc
 ifeq ($(windir),)
 RM = rm -f
 CP = cp
@@ -8,6 +8,7 @@ RM = del
 CP = copy /y
 endif
 
+CFLAGS = -ffunction-sections -O3
 EXT = a
 LIB = libmincrypt.$(EXT)
 LIB_OBJS = dsa_sig.o p256.o p256_ec.o p256_ecdsa.o rsa.o sha.o sha256.o
@@ -24,5 +25,5 @@ $(LIB):$(LIB_OBJS)
 
 
 %.o:%.c
-	$(CROSS_COMPILE)$(CC) -o $@ -c $< $(INC)
+	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< $(INC)
 
