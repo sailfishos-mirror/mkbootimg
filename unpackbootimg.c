@@ -111,6 +111,21 @@ int main(int argc, char** argv)
         printf("BOARD_SECOND_OFFSET %08x\n", header.second_addr - base);
     }
     printf("BOARD_TAGS_OFFSET %08x\n", header.tags_addr - base);
+    int a,b,c,y,m;
+    if (header.os_version != 0) {
+        int os_version,os_patch_level;
+        os_version = header.os_version >> 11;
+        os_patch_level = header.os_version&0x7ff;
+        
+        a = (os_version >> 14)&0x7f;
+        b = (os_version >> 7)&0x7f;
+        c = os_version&0x7f;
+        printf("BOARD_OS_VERSION %d.%d.%d\n", a, b, c);
+        
+        y = (os_patch_level >> 4) + 2000;
+        m = os_patch_level&0xf;
+        printf("BOARD_OS_PATCH_LEVEL %d-%02d\n", y, m);
+    }
     if (header.dt_size != 0) {
         printf("BOARD_DT_SIZE %d\n", header.dt_size);
     }
@@ -172,6 +187,22 @@ int main(int argc, char** argv)
     char tagsofftmp[200];
     sprintf(tagsofftmp, "%08x", header.tags_addr - base);
     write_string_to_file(tmp, tagsofftmp);
+    
+    if (header.os_version != 0) {
+        //printf("os_version...\n");
+        sprintf(tmp, "%s/%s", directory, basename(filename));
+        strcat(tmp, "-osversion");
+        char osvertmp[200];
+        sprintf(osvertmp, "%d.%d.%d", a, b, c);
+        write_string_to_file(tmp, osvertmp);
+
+        //printf("os_patch_level...\n");
+        sprintf(tmp, "%s/%s", directory, basename(filename));
+        strcat(tmp, "-oslevel");
+        char oslvltmp[200];
+        sprintf(oslvltmp, "%d-%02d", y, m);
+        write_string_to_file(tmp, oslvltmp);
+    }
     
     total_read += sizeof(header);
     //printf("total read: %d\n", total_read);
