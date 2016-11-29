@@ -10,7 +10,14 @@ RM = del
 endif
 
 CFLAGS = -ffunction-sections -O3
-LDFLAGS = -Wl,--gc-sections
+LDFLAGS = -Wl
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    LDFLAGS += -dead_strip
+else
+    LDFLAGS += --gc-sections
+endif
 
 all:libmincrypt.a mkbootimg$(EXE) unpackbootimg$(EXE)
 
@@ -41,4 +48,3 @@ clean:
 	$(RM) mkbootimg mkbootimg-static mkbootimg.o unpackbootimg unpackbootimg-static unpackbootimg.o mkbootimg.exe mkbootimg-static.exe unpackbootimg.exe unpackbootimg-static.exe
 	$(RM) libmincrypt.a Makefile.~
 	make -C libmincrypt clean
-
