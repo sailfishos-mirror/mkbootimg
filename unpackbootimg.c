@@ -107,9 +107,7 @@ int main(int argc, char** argv)
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
     printf("BOARD_KERNEL_OFFSET %08x\n", header.kernel_addr - base);
     printf("BOARD_RAMDISK_OFFSET %08x\n", header.ramdisk_addr - base);
-    if (header.second_size != 0) {
-        printf("BOARD_SECOND_OFFSET %08x\n", header.second_addr - base);
-    }
+    printf("BOARD_SECOND_OFFSET %08x\n", header.second_addr - base);
     printf("BOARD_TAGS_OFFSET %08x\n", header.tags_addr - base);
     int a,b,c,y,m = 0;
     if (header.os_version != 0) {
@@ -172,14 +170,12 @@ int main(int argc, char** argv)
     sprintf(ramdiskofftmp, "%08x", header.ramdisk_addr - base);
     write_string_to_file(tmp, ramdiskofftmp);
     
-    if (header.second_size != 0) {
-        //printf("secondoff...\n");
-        sprintf(tmp, "%s/%s", directory, basename(filename));
-        strcat(tmp, "-secondoff");
-        char secondofftmp[200];
-        sprintf(secondofftmp, "%08x", header.second_addr - base);
-        write_string_to_file(tmp, secondofftmp);
-    }
+    //printf("secondoff...\n");
+    sprintf(tmp, "%s/%s", directory, basename(filename));
+    strcat(tmp, "-secondoff");
+    char secondofftmp[200];
+    sprintf(secondofftmp, "%08x", header.second_addr - base);
+    write_string_to_file(tmp, secondofftmp);
     
     //printf("tagsoff...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
