@@ -113,7 +113,7 @@ int write_padding(int fd, unsigned pagesize, unsigned itemsize)
 int parse_os_version(char *ver)
 {
     char *token;
-    int verArray[3];
+    int verArray[3] = {0};
     int a,b,c = 0;
     int i = 0;
 
@@ -134,7 +134,7 @@ int parse_os_version(char *ver)
 int parse_os_patch_level(char *lvl)
 {
     char *token;
-    int lvlArray[3];
+    int lvlArray[2] = {0};
     int y,m = 0;
     int i = 0;
 
