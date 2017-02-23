@@ -118,11 +118,16 @@ int main(int argc, char** argv)
         a = (os_version >> 14)&0x7f;
         b = (os_version >> 7)&0x7f;
         c = os_version&0x7f;
-        printf("BOARD_OS_VERSION %d.%d.%d\n", a, b, c);
         
         y = (os_patch_level >> 4) + 2000;
         m = os_patch_level&0xf;
-        printf("BOARD_OS_PATCH_LEVEL %d-%02d\n", y, m);
+        
+        if((a < 128) && (b < 128) && (c < 128) && (y >= 2000) && (y < 2128) && (m > 0) && (m <= 12)) {
+            printf("BOARD_OS_VERSION %d.%d.%d\n", a, b, c);
+            printf("BOARD_OS_PATCH_LEVEL %d-%02d\n", y, m);
+        } else {
+            header.os_version = 0;
+        }
     }
     if (header.dt_size != 0) {
         printf("BOARD_DT_SIZE %d\n", header.dt_size);
