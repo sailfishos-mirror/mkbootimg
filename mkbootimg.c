@@ -151,6 +151,45 @@ int parse_os_patch_level(char *lvl)
     return 0;
 }
 
+enum hash_alg {
+    HASH_SHA1 = 0,
+};
+
+void generate_id_sha1(boot_img_hdr *hdr, void *kernel_data, void *ramdisk_data,
+                      void *second_data, void *dt_data)
+{
+    SHA_CTX ctx;
+    const uint8_t *sha;
+
+    SHA_init(&ctx);
+    SHA_update(&ctx, kernel_data, hdr->kernel_size);
+    SHA_update(&ctx, &hdr->kernel_size, sizeof(hdr->kernel_size));
+    SHA_update(&ctx, ramdisk_data, hdr->ramdisk_size);
+    SHA_update(&ctx, &hdr->ramdisk_size, sizeof(hdr->ramdisk_size));
+    SHA_update(&ctx, second_data, hdr->second_size);
+    SHA_update(&ctx, &hdr->second_size, sizeof(hdr->second_size));
+    if(dt_data) {
+        SHA_update(&ctx, dt_data, hdr->dt_size);
+        SHA_update(&ctx, &hdr->dt_size, sizeof(hdr->dt_size));
+    }
+    sha = SHA_final(&ctx);
+    memcpy(hdr->id, sha,
+           SHA_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA_DIGEST_SIZE);
+}
+
+void generate_id(enum hash_alg alg, boot_img_hdr *hdr, void *kernel_data,
+                 void *ramdisk_data, void *second_data, void *dt_data)
+{
+    switch (alg) {
+        case HASH_SHA1:
+            generate_id_sha1(hdr, kernel_data, ramdisk_data,
+                             second_data, dt_data);
+            break;
+        default:
+            fprintf(stderr, "Unknown hash type.\n");
+    }
+}
+
 int main(int argc, char **argv)
 {
     boot_img_hdr hdr;
@@ -170,8 +209,6 @@ int main(int argc, char **argv)
     void *dt_data = NULL;
     uint32_t pagesize = 2048;
     int fd;
-    SHA_CTX ctx;
-    const uint8_t* sha;
     uint32_t base           = 0x10000000U;
     uint32_t kernel_offset  = 0x00008000U;
     uint32_t ramdisk_offset = 0x01000000U;
@@ -317,20 +354,8 @@ int main(int argc, char **argv)
     /* put a hash of the contents in the header so boot images can be
      * differentiated based on their first 2k.
      */
-    SHA_init(&ctx);
-    SHA_update(&ctx, kernel_data, hdr.kernel_size);
-    SHA_update(&ctx, &hdr.kernel_size, sizeof(hdr.kernel_size));
-    SHA_update(&ctx, ramdisk_data, hdr.ramdisk_size);
-    SHA_update(&ctx, &hdr.ramdisk_size, sizeof(hdr.ramdisk_size));
-    SHA_update(&ctx, second_data, hdr.second_size);
-    SHA_update(&ctx, &hdr.second_size, sizeof(hdr.second_size));
-    if(dt_data) {
-        SHA_update(&ctx, dt_data, hdr.dt_size);
-        SHA_update(&ctx, &hdr.dt_size, sizeof(hdr.dt_size));
-    }
-    sha = SHA_final(&ctx);
-    memcpy(hdr.id, sha,
-           SHA_DIGEST_SIZE > sizeof(hdr.id) ? sizeof(hdr.id) : SHA_DIGEST_SIZE);
+    generate_id(HASH_SHA1, &hdr, kernel_data, ramdisk_data, second_data,
+                dt_data);
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
