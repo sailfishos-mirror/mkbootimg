@@ -24,6 +24,7 @@
 #include <stdbool.h>
 
 #include "mincrypt/sha.h"
+#include "mincrypt/sha256.h"
 #include "bootimg.h"
 
 static void *load_file(const char *fn, unsigned *_sz)
@@ -73,6 +74,7 @@ int usage(void)
             "       [ --tags_offset <base offset> ]\n"
             "       [ --os_version <A.B.C version> ]\n"
             "       [ --os_patch_level <YYYY-MM-DD date> ]\n"
+            "       [ --hash <sha1(default)|sha256> ]\n"
             "       [ --id ]\n"
             "       -o|--output <filename>\n"
             );
@@ -151,6 +153,98 @@ int parse_os_patch_level(char *lvl)
     return 0;
 }
 
+enum hash_alg {
+    HASH_UNKNOWN = -1,
+    HASH_SHA1 = 0,
+    HASH_SHA256,
+};
+
+struct hash_name {
+    const char *name;
+    enum hash_alg alg;
+};
+
+const struct hash_name hash_names[] = {
+    { "sha1", HASH_SHA1 },
+    { "sha256", HASH_SHA256 },
+    { NULL, /* Sentinel */ },
+};
+
+enum hash_alg parse_hash_alg(char *name)
+{
+    const struct hash_name *ptr = hash_names;
+
+    while (ptr->name) {
+        if (!strcmp(ptr->name, name))
+            return ptr->alg;
+        ptr++;
+    }
+
+    return HASH_UNKNOWN;
+}
+
+void generate_id_sha1(boot_img_hdr *hdr, void *kernel_data, void *ramdisk_data,
+                      void *second_data, void *dt_data)
+{
+    SHA_CTX ctx;
+    const uint8_t *sha;
+
+    SHA_init(&ctx);
+    SHA_update(&ctx, kernel_data, hdr->kernel_size);
+    SHA_update(&ctx, &hdr->kernel_size, sizeof(hdr->kernel_size));
+    SHA_update(&ctx, ramdisk_data, hdr->ramdisk_size);
+    SHA_update(&ctx, &hdr->ramdisk_size, sizeof(hdr->ramdisk_size));
+    SHA_update(&ctx, second_data, hdr->second_size);
+    SHA_update(&ctx, &hdr->second_size, sizeof(hdr->second_size));
+    if(dt_data) {
+        SHA_update(&ctx, dt_data, hdr->dt_size);
+        SHA_update(&ctx, &hdr->dt_size, sizeof(hdr->dt_size));
+    }
+    sha = SHA_final(&ctx);
+    memcpy(hdr->id, sha,
+           SHA_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA_DIGEST_SIZE);
+}
+
+void generate_id_sha256(boot_img_hdr *hdr, void *kernel_data, void *ramdisk_data,
+                        void *second_data, void *dt_data)
+{
+    SHA256_CTX ctx;
+    const uint8_t *sha;
+
+    SHA256_init(&ctx);
+    SHA256_update(&ctx, kernel_data, hdr->kernel_size);
+    SHA256_update(&ctx, &hdr->kernel_size, sizeof(hdr->kernel_size));
+    SHA256_update(&ctx, ramdisk_data, hdr->ramdisk_size);
+    SHA256_update(&ctx, &hdr->ramdisk_size, sizeof(hdr->ramdisk_size));
+    SHA256_update(&ctx, second_data, hdr->second_size);
+    SHA256_update(&ctx, &hdr->second_size, sizeof(hdr->second_size));
+    if(dt_data) {
+        SHA256_update(&ctx, dt_data, hdr->dt_size);
+        SHA256_update(&ctx, &hdr->dt_size, sizeof(hdr->dt_size));
+    }
+    sha = SHA256_final(&ctx);
+    memcpy(hdr->id, sha,
+           SHA256_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA256_DIGEST_SIZE);
+}
+
+void generate_id(enum hash_alg alg, boot_img_hdr *hdr, void *kernel_data,
+                 void *ramdisk_data, void *second_data, void *dt_data)
+{
+    switch (alg) {
+        case HASH_SHA1:
+            generate_id_sha1(hdr, kernel_data, ramdisk_data,
+                             second_data, dt_data);
+            break;
+        case HASH_SHA256:
+            generate_id_sha256(hdr, kernel_data, ramdisk_data,
+                               second_data, dt_data);
+            break;
+        case HASH_UNKNOWN:
+        default:
+            fprintf(stderr, "Unknown hash type.\n");
+    }
+}
+
 int main(int argc, char **argv)
 {
     boot_img_hdr hdr;
@@ -170,14 +264,13 @@ int main(int argc, char **argv)
     void *dt_data = NULL;
     uint32_t pagesize = 2048;
     int fd;
-    SHA_CTX ctx;
-    const uint8_t* sha;
     uint32_t base           = 0x10000000U;
     uint32_t kernel_offset  = 0x00008000U;
     uint32_t ramdisk_offset = 0x01000000U;
     uint32_t second_offset  = 0x00f00000U;
     uint32_t tags_offset    = 0x00000100U;
     size_t cmdlen;
+    enum hash_alg hash_alg = HASH_SHA1;
 
     argc--;
     argv++;
@@ -232,6 +325,12 @@ int main(int argc, char **argv)
                 os_version = parse_os_version(val);
             } else if(!strcmp(arg, "--os_patch_level")) {
                 os_patch_level = parse_os_patch_level(val);
+            } else if(!strcmp(arg, "--hash")) {
+                hash_alg = parse_hash_alg(val);
+                if (hash_alg == HASH_UNKNOWN) {
+                    fprintf(stderr, "error: unknown hash algorithm '%s'\n", val);
+                    return -1;
+                }
             } else {
                 return usage();
             }
@@ -317,20 +416,8 @@ int main(int argc, char **argv)
     /* put a hash of the contents in the header so boot images can be
      * differentiated based on their first 2k.
      */
-    SHA_init(&ctx);
-    SHA_update(&ctx, kernel_data, hdr.kernel_size);
-    SHA_update(&ctx, &hdr.kernel_size, sizeof(hdr.kernel_size));
-    SHA_update(&ctx, ramdisk_data, hdr.ramdisk_size);
-    SHA_update(&ctx, &hdr.ramdisk_size, sizeof(hdr.ramdisk_size));
-    SHA_update(&ctx, second_data, hdr.second_size);
-    SHA_update(&ctx, &hdr.second_size, sizeof(hdr.second_size));
-    if(dt_data) {
-        SHA_update(&ctx, dt_data, hdr.dt_size);
-        SHA_update(&ctx, &hdr.dt_size, sizeof(hdr.dt_size));
-    }
-    sha = SHA_final(&ctx);
-    memcpy(hdr.id, sha,
-           SHA_DIGEST_SIZE > sizeof(hdr.id) ? sizeof(hdr.id) : SHA_DIGEST_SIZE);
+    generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data,
+                dt_data);
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
