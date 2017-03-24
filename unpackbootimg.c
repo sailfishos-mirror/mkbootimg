@@ -30,7 +30,7 @@ int read_padding(FILE* f, unsigned itemsize, int pagesize)
     return count;
 }
 
-void write_string_to_file(char* file, char* string)
+void write_string_to_file(const char* file, const char* string)
 {
     FILE* f = fopen(file, "w");
     fwrite(string, strlen(string), 1, f);
