@@ -126,6 +126,7 @@ int main(int argc, char** argv)
     printf("BOARD_KERNEL_BASE %08x\n", base);
     printf("BOARD_NAME %s\n", header.name);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
+    printf("BOARD_HASH_TYPE %s\n", detect_hash_type(&header));
     printf("BOARD_KERNEL_OFFSET %08x\n", header.kernel_addr - base);
     printf("BOARD_RAMDISK_OFFSET %08x\n", header.ramdisk_addr - base);
     printf("BOARD_SECOND_OFFSET %08x\n", header.second_addr - base);
