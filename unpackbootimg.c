@@ -40,23 +40,23 @@ void write_string_to_file(const char* file, const char* string)
 
 const char *detect_hash_type(const struct boot_img_hdr *hdr)
 {
-	/*
-	 * This isn't a sophisticated or 100% reliable method to detect the hash
-	 * type but it's probably good enough.
-	 *
-	 * sha256 is expected to have no zeroes in the id array
-	 * sha1 is expected to have zeroes in id[5], id[6] and id[7]
-	 * Zeroes anywhere else probably indicates neither.
-	 */
-	const uint32_t *id = hdr->id;
-	if (id[0] != 0 && id[1] != 0 && id[2] != 0 && id[3] != 0 &&
-	    id[4] != 0 && id[5] != 0 && id[6] != 0 && id[7] != 0)
-		return "sha256";
-	else if (id[0] != 0 && id[1] != 0 && id[2] != 0 && id[3] != 0 &&
-		 id[4] != 0 && id[5] == 0 && id[6] == 0 && id[7] == 0)
-		return "sha1";
-	else
-		return "unknown";
+    /*
+     * This isn't a sophisticated or 100% reliable method to detect the hash
+     * type but it's probably good enough.
+     *
+     * sha256 is expected to have no zeroes in the id array
+     * sha1 is expected to have zeroes in id[5], id[6] and id[7]
+     * Zeroes anywhere else probably indicates neither.
+     */
+    const uint32_t *id = hdr->id;
+    if (id[0] != 0 && id[1] != 0 && id[2] != 0 && id[3] != 0 &&
+        id[4] != 0 && id[5] != 0 && id[6] != 0 && id[7] != 0)
+        return "sha256";
+    else if (id[0] != 0 && id[1] != 0 && id[2] != 0 && id[3] != 0 &&
+        id[4] != 0 && id[5] == 0 && id[6] == 0 && id[7] == 0)
+        return "sha1";
+    else
+        return "unknown";
 }
 
 int usage() {
@@ -218,7 +218,7 @@ int main(int argc, char** argv)
         char osvertmp[200];
         sprintf(osvertmp, "%d.%d.%d", a, b, c);
         write_string_to_file(tmp, osvertmp);
-
+        
         //printf("os_patch_level...\n");
         sprintf(tmp, "%s/%s", directory, basename(filename));
         strcat(tmp, "-oslevel");
@@ -226,7 +226,7 @@ int main(int argc, char** argv)
         sprintf(oslvltmp, "%d-%02d", y, m);
         write_string_to_file(tmp, oslvltmp);
     }
-
+    
     //printf("hash...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-hash");
