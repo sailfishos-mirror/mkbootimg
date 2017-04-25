@@ -263,6 +263,29 @@ int main(int argc, char** argv)
     //printf("total read: %d\n", header.ramdisk_size);
     total_read += read_padding(f, header.ramdisk_size, pagesize);
     
+    /*
+     * Even though the second_size is 0, some vendors may place a signature
+     * image there. In such a case read to EOF and try to calculate the
+     * size based on termination with a null, then fix it in header.
+     */
+    if (header.second_size == 0) {
+        int fd = fileno(f);
+        struct stat st;
+        fstat(fd, &st);
+        int second_test_size = st.st_size - total_read;
+        byte* second_test = (byte*)malloc(second_test_size);
+        if(fread(second_test, second_test_size, 1, f)){};
+        u_int16_t *sbuf = (u_int16_t*)second_test;
+        if (sbuf[0]) {
+            int second_size = 0;
+            while (sbuf[0]) {
+                second_size += 2;
+                sbuf++;
+            }
+            header.second_size = second_size;
+        }
+        fseek(f, total_read, SEEK_SET);
+    }
     if (header.second_size != 0) {
         sprintf(tmp, "%s/%s", directory, basename(filename));
         strcat(tmp, "-second");
