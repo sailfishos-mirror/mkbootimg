@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <libgen.h>
+#include <sys/stat.h>
 
 #include "mincrypt/sha.h"
 #include "bootimg.h"
@@ -269,9 +270,8 @@ int main(int argc, char** argv)
      * size based on termination with a null, then fix it in header.
      */
     if (header.second_size == 0) {
-        int fd = fileno(f);
         struct stat st;
-        fstat(fd, &st);
+        stat(filename, &st);
         int second_test_size = st.st_size - total_read;
         byte* second_test = (byte*)malloc(second_test_size);
         if(fread(second_test, second_test_size, 1, f)){};
@@ -282,7 +282,8 @@ int main(int argc, char** argv)
                 second_size += 2;
                 sbuf++;
             }
-            header.second_size = second_size;
+            if (second_size > 4)
+                header.second_size = second_size;
         }
         fseek(f, total_read, SEEK_SET);
     }
