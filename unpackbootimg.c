@@ -273,19 +273,21 @@ int main(int argc, char** argv)
         struct stat st;
         stat(filename, &st);
         int second_test_size = st.st_size - total_read;
-        byte* second_test = (byte*)malloc(second_test_size);
-        if(fread(second_test, second_test_size, 1, f)){};
-        u_int16_t *sbuf = (u_int16_t*)second_test;
-        if (sbuf[0]) {
-            int second_size = 0;
-            while (sbuf[0]) {
-                second_size += 2;
-                sbuf++;
+        if (second_test_size > header.dt_size) {
+            byte* second_test = (byte*)malloc(second_test_size);
+            if(fread(second_test, second_test_size, 1, f)){};
+            u_int16_t *sbuf = (u_int16_t*)second_test;
+            if (sbuf[0]) {
+                int second_size = 0;
+                while (sbuf[0]) {
+                    second_size += 2;
+                    sbuf++;
+                }
+                if ((second_size >= 1024) && (second_size < 2048))
+                    header.second_size = second_size;
             }
-            if (second_size > 4)
-                header.second_size = second_size;
+            fseek(f, total_read, SEEK_SET);
         }
-        fseek(f, total_read, SEEK_SET);
     }
     if (header.second_size != 0) {
         sprintf(tmp, "%s/%s", directory, basename(filename));
