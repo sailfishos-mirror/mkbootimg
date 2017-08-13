@@ -367,17 +367,25 @@ int main(int argc, char **argv)
     memcpy(hdr.magic, BOOT_MAGIC, BOOT_MAGIC_SIZE);
 
     cmdlen = strlen(cmdline);
-    if(cmdlen > (BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE - 2)) {
+    if(cmdlen < BOOT_ARGS_SIZE) {
+        /* the null-character is already present and will be copied */
+        strcpy((char *)hdr.cmdline, cmdline);
+    } else if(cmdlen < BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE) {
+        /* exceeds the limits of the base command-line size, go for the extra */
+        memcpy(hdr.cmdline, cmdline, BOOT_ARGS_SIZE);
+
+        /* small enough to fit with the null-character */
+        strcpy((char *)hdr.extra_cmdline, cmdline+BOOT_ARGS_SIZE);
+    } else {
         fprintf(stderr,"error: kernel commandline too large\n");
         return 1;
-    }
-    /* Even if we need to use the supplemental field, ensure we
-     * are still NULL-terminated */
-    strncpy((char *)hdr.cmdline, cmdline, BOOT_ARGS_SIZE - 1);
-    hdr.cmdline[BOOT_ARGS_SIZE - 1] = '\0';
-    if (cmdlen >= (BOOT_ARGS_SIZE - 1)) {
-        cmdline += (BOOT_ARGS_SIZE - 1);
-        strncpy((char *)hdr.extra_cmdline, cmdline, BOOT_EXTRA_ARGS_SIZE);
+
+#if 0
+        /* an alternative course of action, likely correct if
+            cmdlen == BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE */
+        memcpy(hdr.cmdline, cmdline, BOOT_ARGS_SIZE);
+        memcpy(hdr.extra_cmdline, cmdline+BOOT_ARGS_SIZE, BOOT_EXTRA_ARGS_SIZE);
+#endif
     }
 
     kernel_data = load_file(kernel_fn, &hdr.kernel_size);

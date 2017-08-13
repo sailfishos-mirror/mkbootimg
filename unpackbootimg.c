@@ -122,7 +122,12 @@ int main(int argc, char** argv)
     
     if(fread(&header, sizeof(header), 1, f)){};
     base = header.kernel_addr - 0x00008000;
-    printf("BOARD_KERNEL_CMDLINE %s\n", header.cmdline);
+    /* the command-line can exceed the length of BOOT_ARGS_SIZE */
+    const char *fmt;
+    if(strnlen((char *)header.cmdline, BOOT_ARGS_SIZE)<BOOT_ARGS_SIZE)
+        fmt="BOARD_KERNEL_CMDLINE %.*s\n";
+    else fmt="BOARD_KERNEL_CMDLINE %.*s%.*s\n";
+    printf(fmt, BOOT_ARGS_SIZE, header.cmdline, BOOT_EXTRA_ARGS_SIZE, header.extra_cmdline);
     printf("BOARD_KERNEL_BASE %08x\n", base);
     printf("BOARD_NAME %s\n", header.name);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
@@ -131,7 +136,7 @@ int main(int argc, char** argv)
     printf("BOARD_RAMDISK_OFFSET %08x\n", header.ramdisk_addr - base);
     printf("BOARD_SECOND_OFFSET %08x\n", header.second_addr - base);
     printf("BOARD_TAGS_OFFSET %08x\n", header.tags_addr - base);
-    int a,b,c,y,m = 0;
+    int a=0, b=0, c=0, y=0, m=0;
     if (header.os_version != 0) {
         int os_version,os_patch_level;
         os_version = header.os_version >> 11;
@@ -162,7 +167,16 @@ int main(int argc, char** argv)
     //printf("cmdline...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-cmdline");
-    write_string_to_file(tmp, (char *)header.cmdline);
+    if(strnlen((char *)header.cmdline, BOOT_ARGS_SIZE)<BOOT_ARGS_SIZE)
+        write_string_to_file(tmp, (char *)header.cmdline);
+    else {
+        char tmpbuf[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE+1];
+        memcpy(tmpbuf, header.cmdline, BOOT_ARGS_SIZE);
+        strncpy(tmpbuf+BOOT_ARGS_SIZE, (char *)header.extra_cmdline, BOOT_EXTRA_ARGS_SIZE);
+        tmpbuf[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE]='\0';
+
+        write_string_to_file(tmp, tmpbuf);
+    }
     
     //printf("board...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
