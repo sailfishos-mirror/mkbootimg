@@ -122,12 +122,7 @@ int main(int argc, char** argv)
     
     if(fread(&header, sizeof(header), 1, f)){};
     base = header.kernel_addr - 0x00008000;
-    /* the command-line can exceed the length of BOOT_ARGS_SIZE */
-    const char *fmt;
-    if(strnlen((char *)header.cmdline, BOOT_ARGS_SIZE)<BOOT_ARGS_SIZE)
-        fmt="BOARD_KERNEL_CMDLINE %.*s\n";
-    else fmt="BOARD_KERNEL_CMDLINE %.*s%.*s\n";
-    printf(fmt, BOOT_ARGS_SIZE, header.cmdline, BOOT_EXTRA_ARGS_SIZE, header.extra_cmdline);
+    printf("BOARD_KERNEL_CMDLINE %.*s%.*s\n", BOOT_ARGS_SIZE, header.cmdline, BOOT_EXTRA_ARGS_SIZE, header.extra_cmdline);
     printf("BOARD_KERNEL_BASE %08x\n", base);
     printf("BOARD_NAME %s\n", header.name);
     printf("BOARD_PAGE_SIZE %d\n", header.page_size);
@@ -167,16 +162,10 @@ int main(int argc, char** argv)
     //printf("cmdline...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-cmdline");
-    if(strnlen((char *)header.cmdline, BOOT_ARGS_SIZE)<BOOT_ARGS_SIZE)
-        write_string_to_file(tmp, (char *)header.cmdline);
-    else {
-        char tmpbuf[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE+1];
-        memcpy(tmpbuf, header.cmdline, BOOT_ARGS_SIZE);
-        strncpy(tmpbuf+BOOT_ARGS_SIZE, (char *)header.extra_cmdline, BOOT_EXTRA_ARGS_SIZE);
-        tmpbuf[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE]='\0';
-
-        write_string_to_file(tmp, tmpbuf);
-    }
+    char cmdlinetmp[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE+1];
+    sprintf(cmdlinetmp, "%.*s%.*s", BOOT_ARGS_SIZE, header.cmdline, BOOT_EXTRA_ARGS_SIZE, header.extra_cmdline);
+    cmdlinetmp[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE]='\0';
+    write_string_to_file(tmp, cmdlinetmp);
     
     //printf("board...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
