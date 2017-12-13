@@ -27,7 +27,7 @@ endif
 all:libmincrypt.a mkbootimg$(EXE) unpackbootimg$(EXE)
 
 static:
-	make LDFLAGS="$(LDGLAGS) -static"
+	make LDFLAGS="$(LDFLAGS) -static"
 
 libmincrypt.a:
 	make -C libmincrypt
