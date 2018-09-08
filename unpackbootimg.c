@@ -169,7 +169,7 @@ int main(int argc, char** argv)
             header.os_version = 0;
         }
     }
-    if (header.dt_size != 0) {
+    if (header.dt_size > 1) {
         printf("BOARD_DT_SIZE %d\n", header.dt_size);
     }
     
