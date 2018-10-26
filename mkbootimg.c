@@ -63,17 +63,19 @@ int usage(void)
             "       --kernel <filename>\n"
             "       [ --ramdisk <filename> ]\n"
             "       [ --second <2ndbootloader-filename> ]\n"
+            "       [ --recovery_dtbo <recoverydtbo-filename> ]\n"
             "       [ --cmdline <kernel-commandline> ]\n"
             "       [ --board <boardname> ]\n"
             "       [ --base <address> ]\n"
             "       [ --pagesize <pagesize> ]\n"
-            "       [ --dt <filename> ]\n"
+            "       [ --dt <dtb-filename> ]\n"
             "       [ --kernel_offset <base offset> ]\n"
             "       [ --ramdisk_offset <base offset> ]\n"
             "       [ --second_offset <base offset> ]\n"
             "       [ --tags_offset <base offset> ]\n"
             "       [ --os_version <A.B.C version> ]\n"
             "       [ --os_patch_level <YYYY-MM-DD date> ]\n"
+            "       [ --header_version <version number> ]\n"
             "       [ --hash <sha1(default)|sha256> ]\n"
             "       [ --id ]\n"
             "       -o|--output <filename>\n"
@@ -81,14 +83,13 @@ int usage(void)
     return 1;
 }
 
-
-
 static unsigned char padding[131072] = { 0, };
 
-static void print_id(const uint8_t *id, size_t id_len) {
+static void print_id(const uint8_t *id, size_t id_len)
+{
     printf("0x");
     unsigned i = 0;
-    for (i = 0; i < id_len; i++) {
+    for(i = 0; i < id_len; i++) {
         printf("%02x", id[i]);
     }
     printf("\n");
@@ -174,8 +175,8 @@ enum hash_alg parse_hash_alg(char *name)
 {
     const struct hash_name *ptr = hash_names;
 
-    while (ptr->name) {
-        if (!strcmp(ptr->name, name))
+    while(ptr->name) {
+        if(!strcmp(ptr->name, name))
             return ptr->alg;
         ptr++;
     }
@@ -183,8 +184,8 @@ enum hash_alg parse_hash_alg(char *name)
     return HASH_UNKNOWN;
 }
 
-void generate_id_sha1(boot_img_hdr *hdr, void *kernel_data, void *ramdisk_data,
-                      void *second_data, void *dt_data)
+void generate_id_sha1(boot_img_hdr_v1 *hdr, void *kernel_data, void *ramdisk_data,
+                      void *second_data, void *dt_data, void *recovery_dtbo_data)
 {
     SHA_CTX ctx;
     const uint8_t *sha;
@@ -199,14 +200,16 @@ void generate_id_sha1(boot_img_hdr *hdr, void *kernel_data, void *ramdisk_data,
     if(dt_data) {
         SHA_update(&ctx, dt_data, hdr->dt_size);
         SHA_update(&ctx, &hdr->dt_size, sizeof(hdr->dt_size));
+    } else if(hdr->header_version > 0) {
+        SHA_update(&ctx, recovery_dtbo_data, hdr->recovery_dtbo_size);
+        SHA_update(&ctx, &hdr->recovery_dtbo_size, sizeof(hdr->recovery_dtbo_size));
     }
     sha = SHA_final(&ctx);
-    memcpy(hdr->id, sha,
-           SHA_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA_DIGEST_SIZE);
+    memcpy(hdr->id, sha, SHA_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA_DIGEST_SIZE);
 }
 
-void generate_id_sha256(boot_img_hdr *hdr, void *kernel_data, void *ramdisk_data,
-                        void *second_data, void *dt_data)
+void generate_id_sha256(boot_img_hdr_v1 *hdr, void *kernel_data, void *ramdisk_data,
+                        void *second_data, void *dt_data, void *recovery_dtbo_data)
 {
     SHA256_CTX ctx;
     const uint8_t *sha;
@@ -221,23 +224,23 @@ void generate_id_sha256(boot_img_hdr *hdr, void *kernel_data, void *ramdisk_data
     if(dt_data) {
         SHA256_update(&ctx, dt_data, hdr->dt_size);
         SHA256_update(&ctx, &hdr->dt_size, sizeof(hdr->dt_size));
+    } else if(hdr->header_version > 0) {
+        SHA256_update(&ctx, recovery_dtbo_data, hdr->recovery_dtbo_size);
+        SHA256_update(&ctx, &hdr->recovery_dtbo_size, sizeof(hdr->recovery_dtbo_size));
     }
     sha = SHA256_final(&ctx);
-    memcpy(hdr->id, sha,
-           SHA256_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA256_DIGEST_SIZE);
+    memcpy(hdr->id, sha, SHA256_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA256_DIGEST_SIZE);
 }
 
-void generate_id(enum hash_alg alg, boot_img_hdr *hdr, void *kernel_data,
-                 void *ramdisk_data, void *second_data, void *dt_data)
+void generate_id(enum hash_alg alg, boot_img_hdr_v1 *hdr, void *kernel_data,
+                 void *ramdisk_data, void *second_data, void *dt_data, void *recovery_dtbo_data)
 {
-    switch (alg) {
+    switch(alg) {
         case HASH_SHA1:
-            generate_id_sha1(hdr, kernel_data, ramdisk_data,
-                             second_data, dt_data);
+            generate_id_sha1(hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data);
             break;
         case HASH_SHA256:
-            generate_id_sha256(hdr, kernel_data, ramdisk_data,
-                               second_data, dt_data);
+            generate_id_sha256(hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data);
             break;
         case HASH_UNKNOWN:
         default:
@@ -247,7 +250,7 @@ void generate_id(enum hash_alg alg, boot_img_hdr *hdr, void *kernel_data,
 
 int main(int argc, char **argv)
 {
-    boot_img_hdr hdr;
+    boot_img_hdr_v1 hdr;
 
     char *kernel_fn = NULL;
     void *kernel_data = NULL;
@@ -255,11 +258,14 @@ int main(int argc, char **argv)
     void *ramdisk_data = NULL;
     char *second_fn = NULL;
     void *second_data = NULL;
+    char *recovery_dtbo_fn = NULL;
+    void *recovery_dtbo_data = NULL;
     char *cmdline = "";
     char *bootimg = NULL;
     char *board = "";
     int os_version = 0;
     int os_patch_level = 0;
+    int header_version = 0;
     char *dt_fn = NULL;
     void *dt_data = NULL;
     uint32_t pagesize = 2048;
@@ -273,6 +279,10 @@ int main(int argc, char **argv)
     uint32_t ramdisk_sz     = 0;
     uint32_t second_sz      = 0;
     uint32_t dt_sz          = 0;
+    uint32_t rec_dtbo_sz    = 0;
+    uint64_t rec_dtbo_offset= 0;
+    uint32_t header_sz      = 0;
+
     size_t cmdlen;
     enum hash_alg hash_alg = HASH_SHA1;
 
@@ -284,7 +294,7 @@ int main(int argc, char **argv)
     bool get_id = false;
     while(argc > 0){
         char *arg = argv[0];
-        if (!strcmp(arg, "--id")) {
+        if(!strcmp(arg, "--id")) {
             get_id = true;
             argc -= 1;
             argv += 1;
@@ -300,6 +310,8 @@ int main(int argc, char **argv)
                 ramdisk_fn = val;
             } else if(!strcmp(arg, "--second")) {
                 second_fn = val;
+            } else if(!strcmp(arg, "--recovery_dtbo")) {
+                recovery_dtbo_fn = val;
             } else if(!strcmp(arg, "--cmdline")) {
                 cmdline = val;
             } else if(!strcmp(arg, "--base")) {
@@ -329,6 +341,8 @@ int main(int argc, char **argv)
                 os_version = parse_os_version(val);
             } else if(!strcmp(arg, "--os_patch_level")) {
                 os_patch_level = parse_os_patch_level(val);
+            } else if(!strcmp(arg, "--header_version")) {
+                header_version = strtoul(val, 0, 10);
             } else if(!strcmp(arg, "--hash")) {
                 hash_alg = parse_hash_alg(val);
                 if (hash_alg == HASH_UNKNOWN) {
@@ -350,6 +364,7 @@ int main(int argc, char **argv)
     hdr.tags_addr =    base + tags_offset;
 
     hdr.os_version = (os_version << 11) | os_patch_level;
+    hdr.header_version = header_version;
 
     if(bootimg == 0) {
         fprintf(stderr,"error: no output filename specified\n");
@@ -391,15 +406,14 @@ int main(int argc, char **argv)
 
     if(ramdisk_fn == NULL) {
         ramdisk_data = 0;
-        hdr.ramdisk_size = 0;
     } else {
         ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
         if(ramdisk_data == 0) {
             fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
             return 1;
         }
-        hdr.ramdisk_size = ramdisk_sz;
     }
+    hdr.ramdisk_size = ramdisk_sz;
 
     if(second_fn) {
         second_data = load_file(second_fn, &second_sz);
@@ -410,20 +424,38 @@ int main(int argc, char **argv)
     }
     hdr.second_size = second_sz;
 
-    if(dt_fn) {
-        dt_data = load_file(dt_fn, &dt_sz);
-        if (dt_data == 0) {
-            fprintf(stderr,"error: could not load device tree image '%s'\n", dt_fn);
-            return 1;
+    if(header_version == 0) {
+        if(dt_fn) {
+            dt_data = load_file(dt_fn, &dt_sz);
+            if(dt_data == 0) {
+                fprintf(stderr,"error: could not load device tree image '%s'\n", dt_fn);
+                return 1;
+            }
         }
+        hdr.dt_size = dt_sz; /* overrides hdr.header_version */
+    } else {
+        if(recovery_dtbo_fn) {
+            recovery_dtbo_data = load_file(recovery_dtbo_fn, &rec_dtbo_sz);
+            if(recovery_dtbo_data == 0) {
+                fprintf(stderr,"error: could not load recovery dtbo image '%s'\n", recovery_dtbo_fn);
+                return 1;
+            }
+            /* header occupies a page */
+            rec_dtbo_offset = pagesize * (1 + \
+                                          (kernel_sz + pagesize - 1) / pagesize + \
+                                          (ramdisk_sz + pagesize - 1) / pagesize + \
+                                          (second_sz + pagesize - 1) / pagesize);
+        }
+        header_sz = sizeof(hdr);
     }
-    hdr.dt_size = dt_sz;
+    hdr.recovery_dtbo_size = rec_dtbo_sz;
+    hdr.recovery_dtbo_offset = rec_dtbo_offset;
+    hdr.header_size = header_sz;
 
     /* put a hash of the contents in the header so boot images can be
      * differentiated based on their first 2k.
      */
-    generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data,
-                dt_data);
+    generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data);
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
@@ -448,9 +480,12 @@ int main(int argc, char **argv)
     if(dt_data) {
         if(write(fd, dt_data, hdr.dt_size) != (ssize_t) hdr.dt_size) goto fail;
         if(write_padding(fd, pagesize, hdr.dt_size)) goto fail;
+    } else if(recovery_dtbo_data) {
+        if(write(fd, recovery_dtbo_data, hdr.recovery_dtbo_size) != (ssize_t) hdr.recovery_dtbo_size) goto fail;
+        if(write_padding(fd, pagesize, hdr.recovery_dtbo_size)) goto fail;
     }
 
-    if (get_id) {
+    if(get_id) {
         print_id((uint8_t *) hdr.id, sizeof(hdr.id));
     }
     return 0;
