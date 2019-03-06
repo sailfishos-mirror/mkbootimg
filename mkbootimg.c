@@ -117,41 +117,25 @@ int write_padding(int fd, unsigned pagesize, unsigned itemsize)
 
 int parse_os_version(char *ver)
 {
-    char *token;
-    int verArray[3] = {0};
-    int a,b,c = 0;
-    int i = 0;
+    unsigned int a, b = 0, c = 0;
+    int i;
 
-    token = strtok(ver, ".");
-    while(token != NULL) {
-        sscanf(token, "%d", &verArray[i]);
-        token = strtok(NULL, ".");
-        i++;
-    }
-    a = verArray[0];
-    b = verArray[1];
-    c = verArray[2];
-    if((a < 128) && (b < 128) && (c < 128))
+    i = sscanf(ver, "%u.%u.%u", &a, &b, &c);
+
+    if((i >= 1) && (a < 128) && (b < 128) && (c < 128))
         return (a << 14) | (b << 7) | c;
     return 0;
 }
 
 int parse_os_patch_level(char *lvl)
 {
-    char *token;
-    int lvlArray[2] = {0};
-    int y,m = 0;
-    int i = 0;
+    unsigned int y, m;
+    int i;
 
-    token = strtok(lvl, "-");
-    while(token != NULL) {
-        sscanf(token, "%d", &lvlArray[i]);
-        token = strtok(NULL, "-");
-        i++;
-    }
-    y = lvlArray[0] - 2000;
-    m = lvlArray[1];
-    if((y >= 0) && (y < 128) && (m > 0) && (m <= 12))
+    i = sscanf(lvl, "%u-%u", &y, &m);
+    y -= 2000;
+
+    if((i == 2) && (y < 128) && (m > 0) && (m <= 12))
         return (y << 4) | m;
     return 0;
 }
