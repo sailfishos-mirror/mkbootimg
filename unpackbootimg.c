@@ -41,7 +41,7 @@ void write_string_to_file(const char* file, const char* string)
     fclose(f);
 }
 
-const char *detect_hash_type(boot_img_hdr_v1 *hdr)
+const char *detect_hash_type(boot_img_hdr_v2 *hdr)
 {
     /*
      * This isn't a sophisticated or 100% reliable method to detect the hash
@@ -117,7 +117,7 @@ int main(int argc, char** argv)
 
     int total_read = 0;
     FILE* f = fopen(filename, "rb");
-    boot_img_hdr_v1 header;
+    boot_img_hdr_v2 header;
 
     if (!f) {
         printf("Could not open input file: %s\n", strerror(errno));
@@ -181,12 +181,20 @@ int main(int argc, char** argv)
     } else {
         printf("BOARD_HEADER_VERSION %d\n", header.header_version);
     }
-    if (header.header_version > 0 && header.header_version <= hdr_ver_max) {
-        if (header.recovery_dtbo_size != 0) {
-            printf("BOARD_RECOVERY_DTBO_SIZE %d\n", header.recovery_dtbo_size);
-            printf("BOARD_RECOVERY_DTBO_OFFSET %"PRId64"\n", header.recovery_dtbo_offset);
+    if (header.header_version <= hdr_ver_max) {
+        if (header.header_version > 0) {
+            if (header.recovery_dtbo_size != 0) {
+                printf("BOARD_RECOVERY_DTBO_SIZE %d\n", header.recovery_dtbo_size);
+                printf("BOARD_RECOVERY_DTBO_OFFSET %"PRId64"\n", header.recovery_dtbo_offset);
+            }
+            printf("BOARD_HEADER_SIZE %d\n", header.header_size);
         }
-        printf("BOARD_HEADER_SIZE %d\n", header.header_size);
+        if (header.header_version > 1) {
+            if (header.dtb_size != 0) {
+                printf("BOARD_DTB_SIZE %d\n", header.dtb_size);
+                printf("BOARD_DTB_OFFSET %08"PRIx64"\n", header.dtb_addr - base);
+            }
+        }
     }
 
     if (pagesize == 0) {
@@ -264,13 +272,22 @@ int main(int argc, char** argv)
         write_string_to_file(tmp, oslvltmp);
     }
 
-    if (header.dt_size < hdr_ver_max) {
+    if (header.header_version <= hdr_ver_max) {
         //printf("headerversion...\n");
         sprintf(tmp, "%s/%s", directory, basename(filename));
         strcat(tmp, "-headerversion");
         char hdrvertmp[200];
         sprintf(hdrvertmp, "%d\n", header.header_version);
         write_string_to_file(tmp, hdrvertmp);
+
+        if (header.header_version > 1) {
+            //printf("dtboff...\n");
+            sprintf(tmp, "%s/%s", directory, basename(filename));
+            strcat(tmp, "-dtboff");
+            char dtbofftmp[200];
+            sprintf(dtbofftmp, "%08"PRIx64, header.dtb_addr - base);
+            write_string_to_file(tmp, dtbofftmp);
+        }
     }
 
     //printf("hash...\n");
@@ -309,7 +326,7 @@ int main(int argc, char** argv)
     //printf("total read: %d\n", header.ramdisk_size);
     total_read += read_padding(f, header.ramdisk_size, pagesize);
 
-    if (header.second_size > 0) {
+    if (header.second_size != 0) {
         sprintf(tmp, "%s/%s", directory, basename(filename));
         strcat(tmp, "-second");
         FILE *s = fopen(tmp, "wb");
@@ -326,24 +343,41 @@ int main(int argc, char** argv)
 
     if (header.dt_size > hdr_ver_max) {
         sprintf(tmp, "%s/%s", directory, basename(filename));
-        strcat(tmp, "-dtb");
+        strcat(tmp, "-dt");
         FILE *d = fopen(tmp, "wb");
-        byte* dtb = (byte*)malloc(header.dt_size);
-        //printf("Reading dtb...\n");
-        if(fread(dtb, header.dt_size, 1, f)){};
+        byte* dt = (byte*)malloc(header.dt_size);
+        //printf("Reading dt...\n");
+        if(fread(dt, header.dt_size, 1, f)){};
         total_read += header.dt_size;
-        fwrite(dtb, header.dt_size, 1, d);
+        fwrite(dt, header.dt_size, 1, d);
         fclose(d);
-    } else if (header.recovery_dtbo_size != 0) {
-        sprintf(tmp, "%s/%s", directory, basename(filename));
-        strcat(tmp, "-recoverydtbo");
-        FILE *o = fopen(tmp, "wb");
-        byte* dtbo = (byte*)malloc(header.recovery_dtbo_size);
-        //printf("Reading recoverydtbo...\n");
-        if(fread(dtbo, header.recovery_dtbo_size, 1, f)){};
-        total_read += header.recovery_dtbo_size;
-        fwrite(dtbo, header.recovery_dtbo_size, 1, o);
-        fclose(o);
+    } else {
+        if (header.recovery_dtbo_size != 0) {
+            sprintf(tmp, "%s/%s", directory, basename(filename));
+            strcat(tmp, "-recoverydtbo");
+            FILE *o = fopen(tmp, "wb");
+            byte* dtbo = (byte*)malloc(header.recovery_dtbo_size);
+            //printf("Reading recoverydtbo...\n");
+            if(fread(dtbo, header.recovery_dtbo_size, 1, f)){};
+            total_read += header.recovery_dtbo_size;
+            fwrite(dtbo, header.recovery_dtbo_size, 1, o);
+            fclose(o);
+        }
+
+        //printf("total read: %d\n", header.recovery_dtbo_size);
+        total_read += read_padding(f, header.recovery_dtbo_size, pagesize);
+
+        if (header.dtb_size != 0) {
+            sprintf(tmp, "%s/%s", directory, basename(filename));
+            strcat(tmp, "-dtb");
+            FILE *b = fopen(tmp, "wb");
+            byte* dtb = (byte*)malloc(header.dtb_size);
+            //printf("Reading dtb...\n");
+            if(fread(dtb, header.dtb_size, 1, f)){};
+            total_read += header.dtb_size;
+            fwrite(dtb, header.dtb_size, 1, b);
+            fclose(b);
+        }
     }
 
     fclose(f);
