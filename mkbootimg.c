@@ -1,19 +1,18 @@
-/* tools/mkbootimg/mkbootimg.c
-**
-** Copyright 2007, The Android Open Source Project
-**
-** Licensed under the Apache License, Version 2.0 (the "License");
-** you may not use this file except in compliance with the License.
-** You may obtain a copy of the License at
-**
-**     http://www.apache.org/licenses/LICENSE-2.0
-**
-** Unless required by applicable law or agreed to in writing, software
-** distributed under the License is distributed on an "AS IS" BASIS,
-** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-** See the License for the specific language governing permissions and
-** limitations under the License.
-*/
+/*
+ * Copyright (C) 2007 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,16 +62,19 @@ int usage(void)
             "       --kernel <filename>\n"
             "       [ --ramdisk <filename> ]\n"
             "       [ --second <2ndbootloader-filename> ]\n"
+            "       [ --dtb <dtb-filename> ]\n"
             "       [ --recovery_dtbo <recoverydtbo-filename> ]\n"
+            "       [ --recovery_acpio <recoveryacpio-filename> ]\n"
             "       [ --cmdline <kernel-commandline> ]\n"
             "       [ --board <boardname> ]\n"
             "       [ --base <address> ]\n"
             "       [ --pagesize <pagesize> ]\n"
-            "       [ --dt <dtb-filename> ]\n"
+            "       [ --dt <dt-filename> ]\n"
             "       [ --kernel_offset <base offset> ]\n"
             "       [ --ramdisk_offset <base offset> ]\n"
             "       [ --second_offset <base offset> ]\n"
             "       [ --tags_offset <base offset> ]\n"
+            "       [ --dtb_offset <base offset> ]\n"
             "       [ --os_version <A.B.C version> ]\n"
             "       [ --os_patch_level <YYYY-MM-DD date> ]\n"
             "       [ --header_version <version number> ]\n"
@@ -184,8 +186,8 @@ enum hash_alg parse_hash_alg(char *name)
     return HASH_UNKNOWN;
 }
 
-void generate_id_sha1(boot_img_hdr_v1 *hdr, void *kernel_data, void *ramdisk_data,
-                      void *second_data, void *dt_data, void *recovery_dtbo_data)
+void generate_id_sha1(boot_img_hdr_v2 *hdr, void *kernel_data, void *ramdisk_data,
+                      void *second_data, void *dt_data, void *recovery_dtbo_data, void *dtb_data)
 {
     SHA_CTX ctx;
     const uint8_t *sha;
@@ -203,13 +205,17 @@ void generate_id_sha1(boot_img_hdr_v1 *hdr, void *kernel_data, void *ramdisk_dat
     } else if(hdr->header_version > 0) {
         SHA_update(&ctx, recovery_dtbo_data, hdr->recovery_dtbo_size);
         SHA_update(&ctx, &hdr->recovery_dtbo_size, sizeof(hdr->recovery_dtbo_size));
+        if(hdr->header_version > 1) {
+            SHA_update(&ctx, dtb_data, hdr->dtb_size);
+            SHA_update(&ctx, &hdr->dtb_size, sizeof(hdr->dtb_size));
+        }
     }
     sha = SHA_final(&ctx);
     memcpy(hdr->id, sha, SHA_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA_DIGEST_SIZE);
 }
 
-void generate_id_sha256(boot_img_hdr_v1 *hdr, void *kernel_data, void *ramdisk_data,
-                        void *second_data, void *dt_data, void *recovery_dtbo_data)
+void generate_id_sha256(boot_img_hdr_v2 *hdr, void *kernel_data, void *ramdisk_data,
+                        void *second_data, void *dt_data, void *recovery_dtbo_data, void *dtb_data)
 {
     SHA256_CTX ctx;
     const uint8_t *sha;
@@ -227,20 +233,24 @@ void generate_id_sha256(boot_img_hdr_v1 *hdr, void *kernel_data, void *ramdisk_d
     } else if(hdr->header_version > 0) {
         SHA256_update(&ctx, recovery_dtbo_data, hdr->recovery_dtbo_size);
         SHA256_update(&ctx, &hdr->recovery_dtbo_size, sizeof(hdr->recovery_dtbo_size));
+        if(hdr->header_version > 1) {
+            SHA256_update(&ctx, dtb_data, hdr->dtb_size);
+            SHA256_update(&ctx, &hdr->dtb_size, sizeof(hdr->dtb_size));
+        }
     }
     sha = SHA256_final(&ctx);
     memcpy(hdr->id, sha, SHA256_DIGEST_SIZE > sizeof(hdr->id) ? sizeof(hdr->id) : SHA256_DIGEST_SIZE);
 }
 
-void generate_id(enum hash_alg alg, boot_img_hdr_v1 *hdr, void *kernel_data,
-                 void *ramdisk_data, void *second_data, void *dt_data, void *recovery_dtbo_data)
+void generate_id(enum hash_alg alg, boot_img_hdr_v2 *hdr, void *kernel_data,
+                 void *ramdisk_data, void *second_data, void *dt_data, void *recovery_dtbo_data, void *dtb_data)
 {
     switch(alg) {
         case HASH_SHA1:
-            generate_id_sha1(hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data);
+            generate_id_sha1(hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data, dtb_data);
             break;
         case HASH_SHA256:
-            generate_id_sha256(hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data);
+            generate_id_sha256(hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data, dtb_data);
             break;
         case HASH_UNKNOWN:
         default:
@@ -250,7 +260,7 @@ void generate_id(enum hash_alg alg, boot_img_hdr_v1 *hdr, void *kernel_data,
 
 int main(int argc, char **argv)
 {
-    boot_img_hdr_v1 hdr;
+    boot_img_hdr_v2 hdr;
 
     char *kernel_fn = NULL;
     void *kernel_data = NULL;
@@ -258,6 +268,8 @@ int main(int argc, char **argv)
     void *ramdisk_data = NULL;
     char *second_fn = NULL;
     void *second_data = NULL;
+    char *dtb_fn = NULL;
+    void *dtb_data = NULL;
     char *recovery_dtbo_fn = NULL;
     void *recovery_dtbo_data = NULL;
     char *cmdline = "";
@@ -282,6 +294,8 @@ int main(int argc, char **argv)
     uint32_t rec_dtbo_sz    = 0;
     uint64_t rec_dtbo_offset= 0;
     uint32_t header_sz      = 0;
+    uint32_t dtb_sz         = 0;
+    uint64_t dtb_offset     = 0x01f00000U;
 
     size_t cmdlen;
     enum hash_alg hash_alg = HASH_SHA1;
@@ -310,7 +324,9 @@ int main(int argc, char **argv)
                 ramdisk_fn = val;
             } else if(!strcmp(arg, "--second")) {
                 second_fn = val;
-            } else if(!strcmp(arg, "--recovery_dtbo")) {
+            } else if(!strcmp(arg, "--dtb")) {
+                dtb_fn = val;
+            } else if(!strcmp(arg, "--recovery_dtbo") || !strcmp(arg, "--recovery_acpio")) {
                 recovery_dtbo_fn = val;
             } else if(!strcmp(arg, "--cmdline")) {
                 cmdline = val;
@@ -324,11 +340,13 @@ int main(int argc, char **argv)
                 second_offset = strtoul(val, 0, 16);
             } else if(!strcmp(arg, "--tags_offset")) {
                 tags_offset = strtoul(val, 0, 16);
+            } else if(!strcmp(arg, "--dtb_offset")) {
+                dtb_offset = strtoul(val, 0, 16);
             } else if(!strcmp(arg, "--board")) {
                 board = val;
             } else if(!strcmp(arg,"--pagesize")) {
                 pagesize = strtoul(val, 0, 10);
-                if ((pagesize != 2048) && (pagesize != 4096)
+                if((pagesize != 2048) && (pagesize != 4096)
                     && (pagesize != 8192) && (pagesize != 16384)
                     && (pagesize != 32768) && (pagesize != 65536)
                     && (pagesize != 131072)) {
@@ -345,7 +363,7 @@ int main(int argc, char **argv)
                 header_version = strtoul(val, 0, 10);
             } else if(!strcmp(arg, "--hash")) {
                 hash_alg = parse_hash_alg(val);
-                if (hash_alg == HASH_UNKNOWN) {
+                if(hash_alg == HASH_UNKNOWN) {
                     fprintf(stderr, "error: unknown hash algorithm '%s'\n", val);
                     return -1;
                 }
@@ -363,8 +381,8 @@ int main(int argc, char **argv)
     hdr.second_addr =  base + second_offset;
     hdr.tags_addr =    base + tags_offset;
 
-    hdr.os_version = (os_version << 11) | os_patch_level;
     hdr.header_version = header_version;
+    hdr.os_version = (os_version << 11) | os_patch_level;
 
     if(bootimg == 0) {
         fprintf(stderr,"error: no output filename specified\n");
@@ -446,16 +464,35 @@ int main(int argc, char **argv)
                                           (ramdisk_sz + pagesize - 1) / pagesize + \
                                           (second_sz + pagesize - 1) / pagesize);
         }
-        header_sz = sizeof(hdr);
+        if(header_version == 1) {
+            header_sz = 1648;
+        } else {
+            header_sz = sizeof(hdr);
+        }
+        if(header_version > 1) {
+            if(dtb_fn) {
+                dtb_data = load_file(dtb_fn, &dtb_sz);
+                if(dtb_data == 0) {
+                    fprintf(stderr,"error: could not load recovery dtb image '%s'\n", dtb_fn);
+                    return 1;
+                }
+            }
+        }
     }
     hdr.recovery_dtbo_size = rec_dtbo_sz;
     hdr.recovery_dtbo_offset = rec_dtbo_offset;
     hdr.header_size = header_sz;
+    hdr.dtb_size = dtb_sz;
+    if(header_version > 1) {
+        hdr.dtb_addr = base + dtb_offset;
+    } else {
+        hdr.dtb_addr = 0;
+    }
 
     /* put a hash of the contents in the header so boot images can be
      * differentiated based on their first 2k.
      */
-    generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data);
+    generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data, dtb_data);
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
@@ -480,9 +517,15 @@ int main(int argc, char **argv)
     if(dt_data) {
         if(write(fd, dt_data, hdr.dt_size) != (ssize_t) hdr.dt_size) goto fail;
         if(write_padding(fd, pagesize, hdr.dt_size)) goto fail;
-    } else if(recovery_dtbo_data) {
-        if(write(fd, recovery_dtbo_data, hdr.recovery_dtbo_size) != (ssize_t) hdr.recovery_dtbo_size) goto fail;
-        if(write_padding(fd, pagesize, hdr.recovery_dtbo_size)) goto fail;
+    } else {
+        if(recovery_dtbo_data) {
+            if(write(fd, recovery_dtbo_data, hdr.recovery_dtbo_size) != (ssize_t) hdr.recovery_dtbo_size) goto fail;
+            if(write_padding(fd, pagesize, hdr.recovery_dtbo_size)) goto fail;
+        }
+        if(dtb_data) {
+            if(write(fd, dtb_data, hdr.dtb_size) != (ssize_t) hdr.dtb_size) goto fail;
+            if(write_padding(fd, pagesize, hdr.dtb_size)) goto fail;
+        }
     }
 
     if(get_id) {
