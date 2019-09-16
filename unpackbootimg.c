@@ -188,12 +188,16 @@ int main(int argc, char** argv)
                 printf("BOARD_RECOVERY_DTBO_OFFSET %"PRId64"\n", header.recovery_dtbo_offset);
             }
             printf("BOARD_HEADER_SIZE %d\n", header.header_size);
+        } else {
+            header.recovery_dtbo_size = 0;
         }
         if (header.header_version > 1) {
             if (header.dtb_size != 0) {
                 printf("BOARD_DTB_SIZE %d\n", header.dtb_size);
                 printf("BOARD_DTB_OFFSET %08"PRIx64"\n", header.dtb_addr - base);
             }
+        } else {
+            header.dtb_size = 0;
         }
     }
 
