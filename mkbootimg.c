@@ -445,8 +445,8 @@ int main(int argc, char **argv)
     if(header_version == 0) {
         if(dt_fn) {
             dt_data = load_file(dt_fn, &dt_sz);
-            if(dt_data == 0) {
-                fprintf(stderr,"error: could not load device tree image '%s'\n", dt_fn);
+            if((dt_data == 0) || (dt_sz == 0)) {
+                fprintf(stderr,"error: could not load dt '%s'\n", dt_fn);
                 return 1;
             }
         }
@@ -454,8 +454,8 @@ int main(int argc, char **argv)
     } else {
         if(recovery_dtbo_fn) {
             recovery_dtbo_data = load_file(recovery_dtbo_fn, &rec_dtbo_sz);
-            if(recovery_dtbo_data == 0) {
-                fprintf(stderr,"error: could not load recovery dtbo image '%s'\n", recovery_dtbo_fn);
+            if((recovery_dtbo_data == 0) || (rec_dtbo_sz == 0)) {
+                fprintf(stderr,"error: could not load recovery dtbo '%s'\n", recovery_dtbo_fn);
                 return 1;
             }
             /* header occupies a page */
@@ -472,8 +472,8 @@ int main(int argc, char **argv)
         if(header_version > 1) {
             if(dtb_fn) {
                 dtb_data = load_file(dtb_fn, &dtb_sz);
-                if(dtb_data == 0) {
-                    fprintf(stderr,"error: could not load recovery dtb image '%s'\n", dtb_fn);
+                if((dtb_data == 0) || (dtb_sz == 0)) {
+                    fprintf(stderr,"error: could not load dtb '%s'\n", dtb_fn);
                     return 1;
                 }
             }
