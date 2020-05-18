@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 
 #include "mincrypt/sha.h"
+#include "mincrypt/sha256.h"
 #include "bootimg.h"
 
 typedef unsigned char byte;
@@ -43,25 +44,16 @@ void write_string_to_file(const char* file, const char* string)
 
 const char *detect_hash_type(boot_img_hdr_v2 *hdr)
 {
-    /*
-     * This isn't a sophisticated or 100% reliable method to detect the hash
-     * type but it's probably good enough.
-     *
-     * sha256 is expected to have no zeroes in the id array
-     * sha1 is expected to have zeroes in id[5], id[6] and id[7]
-     * Zeroes anywhere else probably indicates neither.
-     */
-    uint32_t id[8];
+    // sha1 is expected to have zeroes in id[20] and higher
+    // offset by 4 to accomodate bootimg variants with BOOT_NAME_SIZE 20
+    uint8_t id[SHA256_DIGEST_SIZE];
     memcpy(&id, hdr->id, sizeof(id));
-    if (id[0] != 0 && id[1] != 0 && id[2] != 0 && id[3] != 0 &&
-        id[4] != 0 && id[5] != 0 && id[6] != 0 && id[7] != 0) {
-        return "sha256";
-    } else if (id[0] != 0 && id[1] != 0 && id[2] != 0 && id[3] != 0 &&
-               id[4] != 0 && id[5] == 0 && id[6] == 0 && id[7] == 0) {
-        return "sha1";
-    } else {
-        return "unknown";
+    for (int i = SHA_DIGEST_SIZE + 4; i < SHA256_DIGEST_SIZE; ++i) {
+        if (id[i]) {
+            return "sha256";
+        }
     }
+    return "sha1";
 }
 
 int usage()
