@@ -78,7 +78,7 @@ int usage(void)
             "       [ --os_version <A.B.C version> ]\n"
             "       [ --os_patch_level <YYYY-MM-DD date> ]\n"
             "       [ --header_version <version number> ]\n"
-            "       [ --hash <sha1(default)|sha256> ]\n"
+            "       [ --hashtype <sha1(default)|sha256> ]\n"
             "       [ --id ]\n"
             "       -o|--output <filename>\n"
             );
@@ -345,7 +345,7 @@ int main(int argc, char **argv)
                 os_patch_level = parse_os_patch_level(val);
             } else if(!strcmp(arg, "--header_version")) {
                 header_version = strtoul(val, 0, 10);
-            } else if(!strcmp(arg, "--hash")) {
+            } else if(!strcmp(arg, "--hashtype")) {
                 hash_alg = parse_hash_alg(val);
                 if(hash_alg == HASH_UNKNOWN) {
                     fprintf(stderr, "error: unknown hash algorithm '%s'\n", val);

@@ -287,11 +287,11 @@ int main(int argc, char **argv)
         }
     }
 
-    //printf("hash...\n");
+    //printf("hashtype...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
-    strcat(tmp, "-hash");
-    const char *hashtype = detect_hash_type(&header);
-    write_string_to_file(tmp, hashtype);
+    strcat(tmp, "-hashtype");
+    const char *hash_type = detect_hash_type(&header);
+    write_string_to_file(tmp, hash_type);
 
     total_read += sizeof(header);
     //printf("total read: %d\n", total_read);
