@@ -187,7 +187,7 @@ int main(int argc, char **argv)
         if (header.header_version > 1) {
             if (header.dtb_size != 0) {
                 printf("BOARD_DTB_SIZE %d\n", header.dtb_size);
-                printf("BOARD_DTB_OFFSET %08"PRIx64"\n", header.dtb_addr - base);
+                printf("BOARD_DTB_OFFSET 0x%08"PRIx64"\n", header.dtb_addr - base);
             }
         } else {
             header.dtb_size = 0;
@@ -282,7 +282,7 @@ int main(int argc, char **argv)
             sprintf(tmp, "%s/%s", directory, basename(filename));
             strcat(tmp, "-dtb_offset");
             char dtbofftmp[200];
-            sprintf(dtbofftmp, "%08"PRIx64, header.dtb_addr - base);
+            sprintf(dtbofftmp, "0x%08"PRIx64, header.dtb_addr - base);
             write_string_to_file(tmp, dtbofftmp);
         }
     }
