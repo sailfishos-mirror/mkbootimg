@@ -117,7 +117,7 @@ int write_padding(int fd, unsigned pagesize, unsigned itemsize)
 
 int parse_os_version(char *ver)
 {
-    unsigned int a, b = 0, c = 0;
+    int a = 0, b = 0, c = 0;
     int i;
 
     i = sscanf(ver, "%u.%u.%u", &a, &b, &c);
@@ -129,13 +129,13 @@ int parse_os_version(char *ver)
 
 int parse_os_patch_level(char *lvl)
 {
-    unsigned int y, m;
+    int y = 0, m = 0;
     int i;
 
     i = sscanf(lvl, "%u-%u", &y, &m);
     y -= 2000;
 
-    if((i == 2) && (y < 128) && (m > 0) && (m <= 12))
+    if((i == 2) && (y >= 0) && (y < 128) && (m > 0) && (m <= 12))
         return (y << 4) | m;
     return 0;
 }
