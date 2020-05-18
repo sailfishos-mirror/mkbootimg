@@ -16,9 +16,9 @@
 
 typedef unsigned char byte;
 
-int read_padding(FILE* f, unsigned itemsize, int pagesize)
+int read_padding(FILE *f, unsigned itemsize, int pagesize)
 {
-    byte* buf = (byte*)malloc(sizeof(byte) * pagesize);
+    byte *buf = (byte *)malloc(sizeof(byte) * pagesize);
     unsigned pagemask = pagesize - 1;
     unsigned count;
 
@@ -34,9 +34,9 @@ int read_padding(FILE* f, unsigned itemsize, int pagesize)
     return count;
 }
 
-void write_string_to_file(const char* file, const char* string)
+void write_string_to_file(const char *file, const char *string)
 {
-    FILE* f = fopen(file, "w");
+    FILE *f = fopen(file, "w");
     fwrite(string, strlen(string), 1, f);
     fwrite("\n", 1, 1, f);
     fclose(f);
@@ -65,16 +65,16 @@ int usage()
     return 0;
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     char tmp[PATH_MAX];
-    char* directory = "./";
-    char* filename = NULL;
+    char *directory = "./";
+    char *filename = NULL;
     int pagesize = 0;
     int base = 0;
 
-    int seeklimit = 65536; /* arbitrary byte limit to search in input file for ANDROID! magic */
-    int hdr_ver_max = 4; /* arbitrary maximum header version value; when greater assume the field is appended dtb size */
+    int seeklimit = 65536; // arbitrary byte limit to search in input file for ANDROID! magic
+    int hdr_ver_max = 4; // arbitrary maximum header version value; when greater assume the field is appended dtb size
 
     argc--;
     argv++;
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
     }
 
     int total_read = 0;
-    FILE* f = fopen(filename, "rb");
+    FILE *f = fopen(filename, "rb");
     boot_img_hdr_v2 header;
 
     if (!f) {
@@ -300,7 +300,7 @@ int main(int argc, char** argv)
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-zImage");
     FILE *k = fopen(tmp, "wb");
-    byte* kernel = (byte*)malloc(header.kernel_size);
+    byte *kernel = (byte *)malloc(header.kernel_size);
     //printf("Reading kernel...\n");
     if(fread(kernel, header.kernel_size, 1, f)){};
     total_read += header.kernel_size;
@@ -313,7 +313,7 @@ int main(int argc, char** argv)
     sprintf(tmp, "%s/%s", directory, basename(filename));
     strcat(tmp, "-ramdisk.gz");
     FILE *r = fopen(tmp, "wb");
-    byte* ramdisk = (byte*)malloc(header.ramdisk_size);
+    byte *ramdisk = (byte *)malloc(header.ramdisk_size);
     //printf("Reading ramdisk...\n");
     if(fread(ramdisk, header.ramdisk_size, 1, f)){};
     total_read += header.ramdisk_size;
@@ -327,7 +327,7 @@ int main(int argc, char** argv)
         sprintf(tmp, "%s/%s", directory, basename(filename));
         strcat(tmp, "-second");
         FILE *s = fopen(tmp, "wb");
-        byte* second = (byte*)malloc(header.second_size);
+        byte *second = (byte *)malloc(header.second_size);
         //printf("Reading second...\n");
         if(fread(second, header.second_size, 1, f)){};
         total_read += header.second_size;
@@ -342,7 +342,7 @@ int main(int argc, char** argv)
         sprintf(tmp, "%s/%s", directory, basename(filename));
         strcat(tmp, "-dt");
         FILE *d = fopen(tmp, "wb");
-        byte* dt = (byte*)malloc(header.dt_size);
+        byte *dt = (byte *)malloc(header.dt_size);
         //printf("Reading dt...\n");
         if(fread(dt, header.dt_size, 1, f)){};
         total_read += header.dt_size;
@@ -353,7 +353,7 @@ int main(int argc, char** argv)
             sprintf(tmp, "%s/%s", directory, basename(filename));
             strcat(tmp, "-recoverydtbo");
             FILE *o = fopen(tmp, "wb");
-            byte* dtbo = (byte*)malloc(header.recovery_dtbo_size);
+            byte *dtbo = (byte *)malloc(header.recovery_dtbo_size);
             //printf("Reading recoverydtbo...\n");
             if(fread(dtbo, header.recovery_dtbo_size, 1, f)){};
             total_read += header.recovery_dtbo_size;
@@ -368,7 +368,7 @@ int main(int argc, char** argv)
             sprintf(tmp, "%s/%s", directory, basename(filename));
             strcat(tmp, "-dtb");
             FILE *b = fopen(tmp, "wb");
-            byte* dtb = (byte*)malloc(header.dtb_size);
+            byte *dtb = (byte *)malloc(header.dtb_size);
             //printf("Reading dtb...\n");
             if(fread(dtb, header.dtb_size, 1, f)){};
             total_read += header.dtb_size;

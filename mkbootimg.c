@@ -41,7 +41,7 @@ static void *load_file(const char *fn, unsigned *_sz)
 
     if(lseek(fd, 0, SEEK_SET) != 0) goto oops;
 
-    data = (char*) malloc(sz);
+    data = (char *)malloc(sz);
     if(data == 0) goto oops;
 
     if(read(fd, data, sz) != sz) goto oops;
@@ -399,7 +399,7 @@ int main(int argc, char **argv)
         return usage();
     }
 
-    strcpy((char *) hdr.name, board);
+    strcpy((char *)hdr.name, board);
 
     memcpy(hdr.magic, BOOT_MAGIC, BOOT_MAGIC_SIZE);
 
@@ -490,8 +490,7 @@ int main(int argc, char **argv)
     }
 
     /* put a hash of the contents in the header so boot images can be
-     * differentiated based on their first 2k.
-     */
+     * differentiated based on their first 2k */
     generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data, dtb_data);
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
@@ -529,7 +528,7 @@ int main(int argc, char **argv)
     }
 
     if(get_id) {
-        print_id((uint8_t *) hdr.id, sizeof(hdr.id));
+        print_id((uint8_t *)hdr.id, sizeof(hdr.id));
     }
     return 0;
 
