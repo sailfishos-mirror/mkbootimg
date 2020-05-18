@@ -48,7 +48,8 @@ const char *detect_hash_type(boot_img_hdr_v2 *hdr)
     // offset by 4 to accomodate bootimg variants with BOOT_NAME_SIZE 20
     uint8_t id[SHA256_DIGEST_SIZE];
     memcpy(&id, hdr->id, sizeof(id));
-    for (int i = SHA_DIGEST_SIZE + 4; i < SHA256_DIGEST_SIZE; ++i) {
+    int i;
+    for (i = SHA_DIGEST_SIZE + 4; i < SHA256_DIGEST_SIZE; ++i) {
         if (id[i]) {
             return "sha256";
         }
