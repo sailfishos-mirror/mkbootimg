@@ -351,10 +351,10 @@ int main(int argc, char **argv)
     } else {
         if (header.recovery_dtbo_size != 0) {
             sprintf(tmp, "%s/%s", directory, basename(filename));
-            strcat(tmp, "-recoverydtbo");
+            strcat(tmp, "-recovery_dtbo");
             FILE *o = fopen(tmp, "wb");
             byte *dtbo = (byte *)malloc(header.recovery_dtbo_size);
-            //printf("Reading recoverydtbo...\n");
+            //printf("Reading recovery_dtbo...\n");
             if(fread(dtbo, header.recovery_dtbo_size, 1, f)){};
             total_read += header.recovery_dtbo_size;
             fwrite(dtbo, header.recovery_dtbo_size, 1, o);
