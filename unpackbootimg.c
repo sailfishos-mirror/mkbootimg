@@ -225,62 +225,62 @@ int main(int argc, char **argv)
     sprintf(pagesizetmp, "%d", header.page_size);
     write_string_to_file(tmp, pagesizetmp);
 
-    //printf("kerneloff...\n");
+    //printf("kernel_offset...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
-    strcat(tmp, "-kerneloff");
+    strcat(tmp, "-kernel_offset");
     char kernelofftmp[200];
     sprintf(kernelofftmp, "%08x", header.kernel_addr - base);
     write_string_to_file(tmp, kernelofftmp);
 
-    //printf("ramdiskoff...\n");
+    //printf("ramdisk_offset...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
-    strcat(tmp, "-ramdiskoff");
+    strcat(tmp, "-ramdisk_offset");
     char ramdiskofftmp[200];
     sprintf(ramdiskofftmp, "%08x", header.ramdisk_addr - base);
     write_string_to_file(tmp, ramdiskofftmp);
 
-    //printf("secondoff...\n");
+    //printf("second_offset...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
-    strcat(tmp, "-secondoff");
+    strcat(tmp, "-second_offset");
     char secondofftmp[200];
     sprintf(secondofftmp, "%08x", header.second_addr - base);
     write_string_to_file(tmp, secondofftmp);
 
-    //printf("tagsoff...\n");
+    //printf("tags_offset...\n");
     sprintf(tmp, "%s/%s", directory, basename(filename));
-    strcat(tmp, "-tagsoff");
+    strcat(tmp, "-tags_offset");
     char tagsofftmp[200];
     sprintf(tagsofftmp, "%08x", header.tags_addr - base);
     write_string_to_file(tmp, tagsofftmp);
 
     if (header.os_version != 0) {
-        //printf("osversion...\n");
+        //printf("os_version...\n");
         sprintf(tmp, "%s/%s", directory, basename(filename));
-        strcat(tmp, "-osversion");
+        strcat(tmp, "-os_version");
         char osvertmp[200];
         sprintf(osvertmp, "%d.%d.%d", a, b, c);
         write_string_to_file(tmp, osvertmp);
 
-        //printf("oslevel...\n");
+        //printf("os_patch_level...\n");
         sprintf(tmp, "%s/%s", directory, basename(filename));
-        strcat(tmp, "-oslevel");
+        strcat(tmp, "-os_patch_level");
         char oslvltmp[200];
         sprintf(oslvltmp, "%d-%02d", y, m);
         write_string_to_file(tmp, oslvltmp);
     }
 
     if (header.header_version <= hdr_ver_max) {
-        //printf("headerversion...\n");
+        //printf("header_version...\n");
         sprintf(tmp, "%s/%s", directory, basename(filename));
-        strcat(tmp, "-headerversion");
+        strcat(tmp, "-header_version");
         char hdrvertmp[200];
         sprintf(hdrvertmp, "%d\n", header.header_version);
         write_string_to_file(tmp, hdrvertmp);
 
         if (header.header_version > 1) {
-            //printf("dtboff...\n");
+            //printf("dtb_offset...\n");
             sprintf(tmp, "%s/%s", directory, basename(filename));
-            strcat(tmp, "-dtboff");
+            strcat(tmp, "-dtb_offset");
             char dtbofftmp[200];
             sprintf(dtbofftmp, "%08"PRIx64, header.dtb_addr - base);
             write_string_to_file(tmp, dtbofftmp);
