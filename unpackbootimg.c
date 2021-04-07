@@ -18,10 +18,14 @@ typedef unsigned char byte;
 
 char *directory = "./";
 char *filename = NULL;
+int debug = 0;
 
+int total_read = 0;
+
+int pagesize = 0;
 int a = 0, b = 0, c = 0, y = 0, m = 0; // header.os_version component calculation variables
 
-int read_padding(FILE *f, unsigned itemsize, int pagesize)
+int read_padding(FILE *f, unsigned itemsize)
 {
     byte *buf = (byte *)malloc(sizeof(byte) * pagesize);
     unsigned pagemask = pagesize - 1;
@@ -33,6 +37,7 @@ int read_padding(FILE *f, unsigned itemsize, int pagesize)
     count = pagesize - (itemsize & pagemask);
     if(fread(buf, count, 1, f)){};
     free(buf);
+    if(debug>1){printf("read padding: %d\n", count);}
     return count;
 }
 
@@ -41,7 +46,7 @@ void write_string_to_file(const char *name, const char *string)
     char file[PATH_MAX];
     sprintf(file, "%s/%s-%s", directory, basename(filename), name);
     FILE *t = fopen(file, "w");
-    //printf("%s...\n", name);
+    if(debug>0){printf("%s...\n", name);}
     fwrite(string, strlen(string), 1, t);
     fwrite("\n", 1, 1, t);
     fclose(t);
@@ -52,12 +57,15 @@ void write_buffer_to_file(const char *name, FILE *f, const int size)
     char file[PATH_MAX];
     sprintf(file, "%s/%s-%s", directory, basename(filename), name);
     FILE *t = fopen(file, "wb");
-    byte *buffer = (byte *)malloc(size);
-    //printf("Reading %s...\n", name);
-    if(fread(buffer, size, 1, f)){};
-    fwrite(buffer, size, 1, t);
+    byte *buf = (byte *)malloc(size);
+    if(debug>0){printf("Reading %s...\n", name);}
+    if(fread(buf, size, 1, f)){};
+    total_read += size;
+    if(debug>1){printf("read: %d\n", size);}
+    fwrite(buf, size, 1, t);
     fclose(t);
-    free(buffer);
+    free(buf);
+    total_read += read_padding(f, size);
 }
 
 const char *detect_hash_type(boot_img_hdr_v2 *hdr)
@@ -103,6 +111,7 @@ int usage()
     printf("\t-i|--input boot.img\n");
     printf("\t[ -o|--output output_directory]\n");
     printf("\t[ -p|--pagesize <size-in-hexadecimal> ]\n");
+    if(debug>0){printf("\t[ -d|--debug <1|2> ]\n");}
     return 1;
 }
 
@@ -110,7 +119,6 @@ int main(int argc, char **argv)
 {
     char tmp[BOOT_MAGIC_SIZE];
     char *magic = NULL;
-    int pagesize = 0;
     int base = 0;
 
     int seeklimit = 65536; // arbitrary byte limit to search in input file for ANDROID!/VNDRBOOT magic
@@ -129,6 +137,8 @@ int main(int argc, char **argv)
             directory = val;
         } else if(!strcmp(arg, "--pagesize") || !strcmp(arg, "-p")) {
             pagesize = strtoul(val, 0, 16);
+        } else if(!strcmp(arg, "--debug") || !strcmp(arg, "-d")) {
+            debug = atoi(val);
         } else {
             return usage();
         }
@@ -148,14 +158,13 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    int total_read = 0;
     FILE *f = fopen(filename, "rb");
     if (!f) {
         printf("Could not open input file: %s\n", strerror(errno));
         return 1;
     }
 
-    //printf("Reading header...\n");
+    if(debug>0){printf("Reading header...\n");}
     int i;
     for (i = 0; i <= seeklimit; i++) {
         fseek(f, i, SEEK_SET);
@@ -287,45 +296,26 @@ int main(int argc, char **argv)
             write_string_to_file("hashtype", hash_type);
 
             total_read += sizeof(header);
-            //printf("total read: %d\n", total_read);
-            total_read += read_padding(f, sizeof(header), pagesize);
+            if(debug>1){printf("read: %d\n", sizeof(header));}
+            total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
-            total_read += header.kernel_size;
-            //printf("total read: %d\n", header.kernel_size);
-            total_read += read_padding(f, header.kernel_size, pagesize);
 
             write_buffer_to_file("ramdisk", f, header.ramdisk_size);
-            total_read += header.ramdisk_size;
-            //printf("total read: %d\n", header.ramdisk_size);
-            total_read += read_padding(f, header.ramdisk_size, pagesize);
 
             if (header.second_size != 0) {
                 write_buffer_to_file("second", f, header.second_size);
-                total_read += header.second_size;
             }
-            //printf("total read: %d\n", header.second_size);
-            total_read += read_padding(f, header.second_size, pagesize);
 
             if (header.dt_size > hdr_ver_max) {
                 write_buffer_to_file("dt", f, header.dt_size);
-                total_read += header.dt_size;
-                //printf("total read: %d\n", header.dt_size);
-                total_read += read_padding(f, header.dt_size, pagesize);
             } else {
                 if (header.recovery_dtbo_size != 0) {
                     write_buffer_to_file("recovery_dtbo", f, header.recovery_dtbo_size);
-                    total_read += header.recovery_dtbo_size;
                 }
-                //printf("total read: %d\n", header.recovery_dtbo_size);
-                total_read += read_padding(f, header.recovery_dtbo_size, pagesize);
-
                 if (header.dtb_size != 0) {
                     write_buffer_to_file("dtb", f, header.dtb_size);
-                    total_read += header.dtb_size;
                 }
-                //printf("total read: %d\n", header.dtb_size);
-                total_read += read_padding(f, header.dtb_size, pagesize);
             }
         } else {
             // boot_img_hdr_v3 and above are no longer backwards compatible
@@ -358,18 +348,12 @@ int main(int argc, char **argv)
             write_string_to_file("header_version", hdrvertmp);
 
             total_read += sizeof(header);
-            //printf("total read: %d\n", total_read);
-            total_read += read_padding(f, sizeof(header), pagesize);
+            if(debug>1){printf("read: %d\n", sizeof(header));}
+            total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
-            total_read += header.kernel_size;
-            //printf("total read: %d\n", header.kernel_size);
-            total_read += read_padding(f, header.kernel_size, pagesize);
 
             write_buffer_to_file("ramdisk", f, header.ramdisk_size);
-            total_read += header.ramdisk_size;
-            //printf("total read: %d\n", header.ramdisk_size);
-            total_read += read_padding(f, header.ramdisk_size, pagesize);
         }
     } else {
         // vendor_boot_img_hdr started at v3 and is not cross-compatible with boot_img_hdr
@@ -431,22 +415,16 @@ int main(int argc, char **argv)
         write_string_to_file("dtb_offset", dtbofftmp);
 
         total_read += sizeof(header);
-        //printf("total read: %d\n", total_read);
-        total_read += read_padding(f, sizeof(header), pagesize);
+        if(debug>1){printf("read: %d\n", sizeof(header));}
+        total_read += read_padding(f, sizeof(header));
 
         write_buffer_to_file("vendor_ramdisk", f, header.vendor_ramdisk_size);
-        total_read += header.vendor_ramdisk_size;
-        //printf("total read: %d\n", header.vendor_ramdisk_size);
-        total_read += read_padding(f, header.vendor_ramdisk_size, pagesize);
 
         write_buffer_to_file("dtb", f, header.dtb_size);
-        total_read += header.dtb_size;
-        //printf("total read: %d\n", header.dtb_size);
-        total_read += read_padding(f, header.dtb_size, pagesize);
     }
 
     fclose(f);
 
-    //printf("Total Read: %d\n", total_read);
+    if(debug>0){printf("Total Read: %d\n", total_read);}
     return 0;
 }
