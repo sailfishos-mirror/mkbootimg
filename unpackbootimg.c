@@ -296,7 +296,7 @@ int main(int argc, char **argv)
             write_string_to_file("hashtype", hash_type);
 
             total_read += sizeof(header);
-            if(debug>1){printf("read: %ld\n", sizeof(header));}
+            if(debug>1){printf("read: %ld\n", sizeof(header));} // this will always show 1660 here since it uses boot_img_hdr_v2
             total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
