@@ -59,17 +59,14 @@ oops:
 int usage(void)
 {
     fprintf(stderr,"usage: mkbootimg\n"
-            "       --kernel <filename>\n"
-            "       [ --ramdisk <filename> ]\n"
+            "       [ --kernel <filename> ]\n"
+            "       [ --ramdisk <filename> | --vendor_ramdisk <filename> ]\n"
             "       [ --second <filename> ]\n"
             "       [ --dtb <filename> ]\n"
-            "       [ --recovery_dtbo <filename> ]\n"
-            "       [ --recovery_acpio <filename> ]\n"
-            "       [ --cmdline <command line> ]\n"
-            "       [ --board <board name> ]\n"
-            "       [ --base <address> ]\n"
-            "       [ --pagesize <pagesize> ]\n"
+            "       [ --recovery_dtbo <filename> | --recovery_acpio <filename> ]\n"
             "       [ --dt <filename> ]\n"
+            "       [ --cmdline <command line> | --vendor_cmdline <command line> ]\n"
+            "       [ --base <address> ]\n"
             "       [ --kernel_offset <base offset> ]\n"
             "       [ --ramdisk_offset <base offset> ]\n"
             "       [ --second_offset <base offset> ]\n"
@@ -77,10 +74,12 @@ int usage(void)
             "       [ --dtb_offset <base offset> ]\n"
             "       [ --os_version <A.B.C version> ]\n"
             "       [ --os_patch_level <YYYY-MM-DD date> ]\n"
+            "       [ --board <board name> ]\n"
+            "       [ --pagesize <pagesize> ]\n"
             "       [ --header_version <version number> ]\n"
             "       [ --hashtype <sha1(default)|sha256> ]\n"
             "       [ --id ]\n"
-            "       -o|--output <filename>\n"
+            "       -o|--output <filename> | --vendor_boot <filename>\n"
             );
     return 1;
 }
@@ -244,8 +243,7 @@ void generate_id(enum hash_alg alg, boot_img_hdr_v2 *hdr, void *kernel_data,
 
 int main(int argc, char **argv)
 {
-    boot_img_hdr_v2 hdr;
-
+    char *bootimg = NULL;
     char *kernel_fn = NULL;
     void *kernel_data = NULL;
     char *ramdisk_fn = NULL;
@@ -256,44 +254,42 @@ int main(int argc, char **argv)
     void *dtb_data = NULL;
     char *recovery_dtbo_fn = NULL;
     void *recovery_dtbo_data = NULL;
+    char *dt_fn = NULL;
+    void *dt_data = NULL;
     char *cmdline = "";
-    char *bootimg = NULL;
     char *board = "";
     int os_version = 0;
     int os_patch_level = 0;
     int header_version = 0;
-    char *dt_fn = NULL;
-    void *dt_data = NULL;
     uint32_t pagesize = 2048;
-    int fd;
     uint32_t base           = 0x10000000U;
     uint32_t kernel_offset  = 0x00008000U;
     uint32_t ramdisk_offset = 0x01000000U;
     uint32_t second_offset  = 0x00f00000U;
     uint32_t tags_offset    = 0x00000100U;
+    uint64_t dtb_offset     = 0x01f00000U;
     uint32_t kernel_sz      = 0;
     uint32_t ramdisk_sz     = 0;
     uint32_t second_sz      = 0;
-    uint32_t dt_sz          = 0;
+    uint32_t dtb_sz         = 0;
     uint32_t rec_dtbo_sz    = 0;
     uint64_t rec_dtbo_offset= 0;
+    uint32_t dt_sz          = 0;
     uint32_t header_sz      = 0;
-    uint32_t dtb_sz         = 0;
-    uint64_t dtb_offset     = 0x01f00000U;
 
+    int fd;
     size_t cmdlen;
     enum hash_alg hash_alg = HASH_SHA1;
 
+    bool show_id = false;
+    bool vendor_boot = false;
+
     argc--;
     argv++;
-
-    memset(&hdr, 0, sizeof(hdr));
-
-    bool get_id = false;
     while(argc > 0){
         char *arg = argv[0];
         if(!strcmp(arg, "--id")) {
-            get_id = true;
+            show_id = true;
             argc -= 1;
             argv += 1;
         } else if(argc >= 2) {
@@ -302,9 +298,15 @@ int main(int argc, char **argv)
             argv += 2;
             if(!strcmp(arg, "--output") || !strcmp(arg, "-o")) {
                 bootimg = val;
+            } else if(!strcmp(arg, "--vendor_boot")) {
+                vendor_boot = true;
+                bootimg = val;
             } else if(!strcmp(arg, "--kernel")) {
                 kernel_fn = val;
             } else if(!strcmp(arg, "--ramdisk")) {
+                ramdisk_fn = val;
+            } else if(!strcmp(arg, "--vendor_ramdisk")) {
+                vendor_boot = true;
                 ramdisk_fn = val;
             } else if(!strcmp(arg, "--second")) {
                 second_fn = val;
@@ -312,7 +314,12 @@ int main(int argc, char **argv)
                 dtb_fn = val;
             } else if(!strcmp(arg, "--recovery_dtbo") || !strcmp(arg, "--recovery_acpio")) {
                 recovery_dtbo_fn = val;
+            } else if(!strcmp(arg, "--dt")) {
+                dt_fn = val;
             } else if(!strcmp(arg, "--cmdline")) {
+                cmdline = val;
+            } else if(!strcmp(arg, "--vendor_cmdline")) {
+                vendor_boot = true;
                 cmdline = val;
             } else if(!strcmp(arg, "--base")) {
                 base = strtoul(val, 0, 16);
@@ -326,6 +333,10 @@ int main(int argc, char **argv)
                 tags_offset = strtoul(val, 0, 16);
             } else if(!strcmp(arg, "--dtb_offset")) {
                 dtb_offset = strtoul(val, 0, 16);
+            } else if(!strcmp(arg, "--os_version")) {
+                os_version = parse_os_version(val);
+            } else if(!strcmp(arg, "--os_patch_level")) {
+                os_patch_level = parse_os_patch_level(val);
             } else if(!strcmp(arg, "--board")) {
                 board = val;
             } else if(!strcmp(arg,"--pagesize")) {
@@ -337,12 +348,6 @@ int main(int argc, char **argv)
                     fprintf(stderr,"error: unsupported page size %d\n", pagesize);
                     return -1;
                 }
-            } else if(!strcmp(arg, "--dt")) {
-                dt_fn = val;
-            } else if(!strcmp(arg, "--os_version")) {
-                os_version = parse_os_version(val);
-            } else if(!strcmp(arg, "--os_patch_level")) {
-                os_patch_level = parse_os_patch_level(val);
             } else if(!strcmp(arg, "--header_version")) {
                 header_version = strtoul(val, 0, 10);
             } else if(!strcmp(arg, "--hashtype")) {
@@ -358,124 +363,11 @@ int main(int argc, char **argv)
             return usage();
         }
     }
-    hdr.page_size = pagesize;
 
-    hdr.kernel_addr =  base + kernel_offset;
-    hdr.ramdisk_addr = base + ramdisk_offset;
-    hdr.second_addr =  base + second_offset;
-    hdr.tags_addr =    base + tags_offset;
-
-    hdr.header_version = header_version;
-    hdr.os_version = (os_version << 11) | os_patch_level;
-
-    if(bootimg == 0) {
+    if(bootimg == NULL) {
         fprintf(stderr,"error: no output filename specified\n");
         return usage();
     }
-
-    if(kernel_fn == 0) {
-        fprintf(stderr,"error: no kernel image specified\n");
-        return usage();
-    }
-
-    if(strlen(board) >= BOOT_NAME_SIZE) {
-        fprintf(stderr,"error: board name too large\n");
-        return usage();
-    }
-
-    strcpy((char *)hdr.name, board);
-
-    memcpy(hdr.magic, BOOT_MAGIC, BOOT_MAGIC_SIZE);
-
-    cmdlen = strlen(cmdline);
-    if(cmdlen <= BOOT_ARGS_SIZE) {
-        strcpy((char *)hdr.cmdline, cmdline);
-    } else if(cmdlen <= BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE) {
-        /* exceeds the limits of the base command-line size, go for the extra */
-        memcpy(hdr.cmdline, cmdline, BOOT_ARGS_SIZE);
-        strcpy((char *)hdr.extra_cmdline, cmdline+BOOT_ARGS_SIZE);
-    } else {
-        fprintf(stderr,"error: kernel commandline too large\n");
-        return 1;
-    }
-
-    kernel_data = load_file(kernel_fn, &kernel_sz);
-    if(kernel_data == 0) {
-        fprintf(stderr,"error: could not load kernel '%s'\n", kernel_fn);
-        return 1;
-    }
-    hdr.kernel_size = kernel_sz;
-
-    if(ramdisk_fn == NULL) {
-        ramdisk_data = 0;
-    } else {
-        ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
-        if(ramdisk_data == 0) {
-            fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
-            return 1;
-        }
-    }
-    hdr.ramdisk_size = ramdisk_sz;
-
-    if(second_fn) {
-        second_data = load_file(second_fn, &second_sz);
-        if(second_data == 0) {
-            fprintf(stderr,"error: could not load secondstage '%s'\n", second_fn);
-            return 1;
-        }
-    }
-    hdr.second_size = second_sz;
-
-    if(header_version == 0) {
-        if(dt_fn) {
-            dt_data = load_file(dt_fn, &dt_sz);
-            if((dt_data == 0) || (dt_sz == 0)) {
-                fprintf(stderr,"error: could not load dt '%s'\n", dt_fn);
-                return 1;
-            }
-        }
-        hdr.dt_size = dt_sz; /* overrides hdr.header_version */
-    } else {
-        if(recovery_dtbo_fn) {
-            recovery_dtbo_data = load_file(recovery_dtbo_fn, &rec_dtbo_sz);
-            if((recovery_dtbo_data == 0) || (rec_dtbo_sz == 0)) {
-                fprintf(stderr,"error: could not load recovery dtbo '%s'\n", recovery_dtbo_fn);
-                return 1;
-            }
-            /* header occupies a page */
-            rec_dtbo_offset = pagesize * (1 + \
-                                          (kernel_sz + pagesize - 1) / pagesize + \
-                                          (ramdisk_sz + pagesize - 1) / pagesize + \
-                                          (second_sz + pagesize - 1) / pagesize);
-        }
-        if(header_version == 1) {
-            header_sz = 1648;
-        } else {
-            header_sz = sizeof(hdr);
-        }
-        if(header_version > 1) {
-            if(dtb_fn) {
-                dtb_data = load_file(dtb_fn, &dtb_sz);
-                if((dtb_data == 0) || (dtb_sz == 0)) {
-                    fprintf(stderr,"error: could not load dtb '%s'\n", dtb_fn);
-                    return 1;
-                }
-            }
-        }
-    }
-    hdr.recovery_dtbo_size = rec_dtbo_sz;
-    hdr.recovery_dtbo_offset = rec_dtbo_offset;
-    hdr.header_size = header_sz;
-    hdr.dtb_size = dtb_sz;
-    if(header_version > 1) {
-        hdr.dtb_addr = base + dtb_offset;
-    } else {
-        hdr.dtb_addr = 0;
-    }
-
-    /* put a hash of the contents in the header so boot images can be
-     * differentiated based on their first 2k */
-    generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data, dtb_data);
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
@@ -483,43 +375,279 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if(write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) goto fail;
-    if(write_padding(fd, pagesize, sizeof(hdr))) goto fail;
+    if(!vendor_boot) {
 
-    if(write(fd, kernel_data, hdr.kernel_size) != (ssize_t) hdr.kernel_size) goto fail;
-    if(write_padding(fd, pagesize, hdr.kernel_size)) goto fail;
+        if(kernel_fn == 0) {
+            fprintf(stderr,"error: no kernel image specified\n");
+            return usage();
+        }
 
-    if(write(fd, ramdisk_data, hdr.ramdisk_size) != (ssize_t) hdr.ramdisk_size) goto fail;
-    if(write_padding(fd, pagesize, hdr.ramdisk_size)) goto fail;
+        if(header_version < 3) {
+            // boot_img_hdr_v2 in the backported header supports all boot_img_hdr versions and cross-compatible variants below 3
 
-    if(second_data) {
-        if(write(fd, second_data, hdr.second_size) != (ssize_t) hdr.second_size) goto fail;
-        if(write_padding(fd, pagesize, hdr.second_size)) goto fail;
-    }
+            boot_img_hdr_v2 hdr;
+            memset(&hdr, 0, sizeof(hdr));
 
-    if(dt_data) {
-        if(write(fd, dt_data, hdr.dt_size) != (ssize_t) hdr.dt_size) goto fail;
-        if(write_padding(fd, pagesize, hdr.dt_size)) goto fail;
+            memcpy(hdr.magic, BOOT_MAGIC, BOOT_MAGIC_SIZE);
+
+            hdr.page_size = pagesize;
+
+            hdr.kernel_addr =  base + kernel_offset;
+            hdr.ramdisk_addr = base + ramdisk_offset;
+            hdr.second_addr =  base + second_offset;
+            hdr.tags_addr =    base + tags_offset;
+
+            hdr.header_version = header_version;
+            hdr.os_version = (os_version << 11) | os_patch_level;
+
+            if(strlen(board) >= BOOT_NAME_SIZE) {
+                fprintf(stderr,"error: board name too large\n");
+                return usage();
+            }
+            strcpy((char *)hdr.name, board);
+
+            cmdlen = strlen(cmdline);
+            if(cmdlen <= BOOT_ARGS_SIZE) {
+                strcpy((char *)hdr.cmdline, cmdline);
+            } else if(cmdlen <= BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE) {
+                // exceeds the limits of the base command-line size, go for the extra
+                memcpy(hdr.cmdline, cmdline, BOOT_ARGS_SIZE);
+                strcpy((char *)hdr.extra_cmdline, cmdline+BOOT_ARGS_SIZE);
+            } else {
+                fprintf(stderr,"error: kernel cmdline too large\n");
+                return 1;
+            }
+
+            kernel_data = load_file(kernel_fn, &kernel_sz);
+            if(kernel_data == 0) {
+                fprintf(stderr,"error: could not load kernel '%s'\n", kernel_fn);
+                return 1;
+            }
+            hdr.kernel_size = kernel_sz;
+
+            if(ramdisk_fn == NULL) {
+                ramdisk_data = 0;
+            } else {
+                ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
+                if(ramdisk_data == 0) {
+                    fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
+                    return 1;
+                }
+            }
+            hdr.ramdisk_size = ramdisk_sz;
+
+            if(second_fn) {
+                second_data = load_file(second_fn, &second_sz);
+                if(second_data == 0) {
+                    fprintf(stderr,"error: could not load secondstage '%s'\n", second_fn);
+                    return 1;
+                }
+            }
+            hdr.second_size = second_sz;
+
+            if(header_version == 0) {
+                if(dt_fn) {
+                    dt_data = load_file(dt_fn, &dt_sz);
+                    if((dt_data == 0) || (dt_sz == 0)) {
+                        fprintf(stderr,"error: could not load dt '%s'\n", dt_fn);
+                        return 1;
+                    }
+                }
+                hdr.dt_size = dt_sz; // overrides hdr.header_version
+            } else {
+                if(recovery_dtbo_fn) {
+                    recovery_dtbo_data = load_file(recovery_dtbo_fn, &rec_dtbo_sz);
+                    if((recovery_dtbo_data == 0) || (rec_dtbo_sz == 0)) {
+                        fprintf(stderr,"error: could not load recovery dtbo '%s'\n", recovery_dtbo_fn);
+                        return 1;
+                    }
+                    // header occupies a page
+                    rec_dtbo_offset = pagesize * (1 + \
+                                                  (kernel_sz + pagesize - 1) / pagesize + \
+                                                  (ramdisk_sz + pagesize - 1) / pagesize + \
+                                                  (second_sz + pagesize - 1) / pagesize);
+                }
+                if(header_version > 1) {
+                    if(dtb_fn) {
+                        dtb_data = load_file(dtb_fn, &dtb_sz);
+                        if((dtb_data == 0) || (dtb_sz == 0)) {
+                            fprintf(stderr,"error: could not load dtb '%s'\n", dtb_fn);
+                            return 1;
+                        }
+                    }
+                    hdr.dtb_addr = base + dtb_offset;
+                }
+                if(header_version == 1) {
+                    header_sz = 1648;
+                } else {
+                    header_sz = sizeof(hdr); // this will always show 1660 here since it uses boot_img_hdr_v2
+                }
+            }
+            hdr.recovery_dtbo_size = rec_dtbo_sz;
+            hdr.recovery_dtbo_offset = rec_dtbo_offset;
+            hdr.header_size = header_sz;
+            hdr.dtb_size = dtb_sz;
+            if(header_version < 2) {
+                hdr.dtb_addr = 0;
+            }
+
+            // put a hash of the contents in the header so boot images can be differentiated based on their first 2k
+            generate_id(hash_alg, &hdr, kernel_data, ramdisk_data, second_data, dt_data, recovery_dtbo_data, dtb_data);
+
+            if(write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) goto fail;
+            if(write_padding(fd, pagesize, sizeof(hdr))) goto fail;
+
+            if(write(fd, kernel_data, hdr.kernel_size) != (ssize_t) hdr.kernel_size) goto fail;
+            if(write_padding(fd, pagesize, hdr.kernel_size)) goto fail;
+
+            if(write(fd, ramdisk_data, hdr.ramdisk_size) != (ssize_t) hdr.ramdisk_size) goto fail;
+            if(write_padding(fd, pagesize, hdr.ramdisk_size)) goto fail;
+
+            if(second_data) {
+                if(write(fd, second_data, hdr.second_size) != (ssize_t) hdr.second_size) goto fail;
+                if(write_padding(fd, pagesize, hdr.second_size)) goto fail;
+            }
+
+            if(dt_data) {
+                if(write(fd, dt_data, hdr.dt_size) != (ssize_t) hdr.dt_size) goto fail;
+                if(write_padding(fd, pagesize, hdr.dt_size)) goto fail;
+            } else {
+                if(recovery_dtbo_data) {
+                    if(write(fd, recovery_dtbo_data, hdr.recovery_dtbo_size) != (ssize_t) hdr.recovery_dtbo_size) goto fail;
+                    if(write_padding(fd, pagesize, hdr.recovery_dtbo_size)) goto fail;
+                }
+                if(dtb_data) {
+                    if(write(fd, dtb_data, hdr.dtb_size) != (ssize_t) hdr.dtb_size) goto fail;
+                    if(write_padding(fd, pagesize, hdr.dtb_size)) goto fail;
+                }
+            }
+
+            if(show_id) {
+                print_id((uint8_t *)hdr.id, sizeof(hdr.id));
+            }
+
+        } else {
+            // boot_img_hdr_v3 and above are no longer backwards compatible
+
+            boot_img_hdr_v3 hdr;
+            memset(&hdr, 0, sizeof(hdr));
+
+            memcpy(hdr.magic, BOOT_MAGIC, BOOT_MAGIC_SIZE);
+
+            pagesize = 4096; // page_size is hardcoded to 4096 in boot_img_hdr_v3 and above
+
+            hdr.os_version = (os_version << 11) | os_patch_level;
+            hdr.header_size = sizeof(hdr);
+            hdr.header_version = header_version;
+
+            cmdlen = strlen(cmdline);
+            if(cmdlen <= BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE) {
+                strcpy((char *)hdr.cmdline, cmdline);
+            } else {
+                fprintf(stderr,"error: kernel cmdline too large\n");
+                return 1;
+            }
+
+            kernel_data = load_file(kernel_fn, &kernel_sz);
+            if(kernel_data == 0) {
+                fprintf(stderr,"error: could not load kernel '%s'\n", kernel_fn);
+                return 1;
+            }
+            hdr.kernel_size = kernel_sz;
+
+            if(ramdisk_fn == NULL) {
+                ramdisk_data = 0;
+            } else {
+                ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
+                if(ramdisk_data == 0) {
+                    fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
+                    return 1;
+                }
+            }
+            hdr.ramdisk_size = ramdisk_sz;
+
+            if(write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) goto fail;
+            if(write_padding(fd, pagesize, sizeof(hdr))) goto fail;
+
+            if(write(fd, kernel_data, hdr.kernel_size) != (ssize_t) hdr.kernel_size) goto fail;
+            if(write_padding(fd, pagesize, hdr.kernel_size)) goto fail;
+
+            if(write(fd, ramdisk_data, hdr.ramdisk_size) != (ssize_t) hdr.ramdisk_size) goto fail;
+            if(write_padding(fd, pagesize, hdr.ramdisk_size)) goto fail;
+
+        }
     } else {
-        if(recovery_dtbo_data) {
-            if(write(fd, recovery_dtbo_data, hdr.recovery_dtbo_size) != (ssize_t) hdr.recovery_dtbo_size) goto fail;
-            if(write_padding(fd, pagesize, hdr.recovery_dtbo_size)) goto fail;
-        }
-        if(dtb_data) {
-            if(write(fd, dtb_data, hdr.dtb_size) != (ssize_t) hdr.dtb_size) goto fail;
-            if(write_padding(fd, pagesize, hdr.dtb_size)) goto fail;
-        }
-    }
+        // vendor_boot_img_hdr started at v3 and is not cross-compatible with boot_img_hdr
 
-    if(get_id) {
-        print_id((uint8_t *)hdr.id, sizeof(hdr.id));
+        vendor_boot_img_hdr_v3 hdr;
+        memset(&hdr, 0, sizeof(hdr));
+
+        memcpy(hdr.magic, VENDOR_BOOT_MAGIC, VENDOR_BOOT_MAGIC_SIZE);
+
+        if(header_version < 3) {
+            header_version = 3;
+        }
+        hdr.header_version = header_version;
+        hdr.page_size = pagesize;
+
+        hdr.kernel_addr =  base + kernel_offset;
+        hdr.ramdisk_addr = base + ramdisk_offset;
+        hdr.tags_addr =    base + tags_offset;
+        hdr.dtb_addr =     base + dtb_offset;
+
+        hdr.header_size = sizeof(hdr);
+
+        if(strlen(board) >= VENDOR_BOOT_NAME_SIZE) {
+            fprintf(stderr,"error: board name too large\n");
+            return usage();
+        }
+        strcpy((char *)hdr.name, board);
+
+        cmdlen = strlen(cmdline);
+        if(cmdlen <= VENDOR_BOOT_ARGS_SIZE) {
+            strcpy((char *)hdr.cmdline, cmdline);
+        } else {
+            fprintf(stderr,"error: vendor cmdline too large\n");
+            return 1;
+        }
+
+        if(ramdisk_fn == NULL) {
+            ramdisk_data = 0;
+        } else {
+            ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
+            if((ramdisk_data == 0) || (ramdisk_sz == 0)) {
+                fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
+                return 1;
+            }
+        }
+        hdr.vendor_ramdisk_size = ramdisk_sz;
+
+        if(dtb_fn == NULL) {
+            dtb_data = 0;
+        } else {
+            dtb_data = load_file(dtb_fn, &dtb_sz);
+            if((dtb_data == 0) || (dtb_sz == 0)) {
+                fprintf(stderr,"error: could not load dtb '%s'\n", dtb_fn);
+                return 1;
+            }
+        }
+        hdr.dtb_size = dtb_sz;
+
+        if(write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) goto fail;
+        if(write_padding(fd, pagesize, sizeof(hdr))) goto fail;
+
+        if(write(fd, ramdisk_data, hdr.vendor_ramdisk_size) != (ssize_t) hdr.vendor_ramdisk_size) goto fail;
+        if(write_padding(fd, pagesize, hdr.vendor_ramdisk_size)) goto fail;
+
+        if(write(fd, dtb_data, hdr.dtb_size) != (ssize_t) hdr.dtb_size) goto fail;
+        if(write_padding(fd, pagesize, hdr.dtb_size)) goto fail;
+
     }
     return 0;
 
 fail:
     unlink(bootimg);
     close(fd);
-    fprintf(stderr,"error: failed writing '%s': %s\n", bootimg,
-            strerror(errno));
+    fprintf(stderr,"error: failed writing '%s': %s\n", bootimg, strerror(errno));
     return 1;
 }
