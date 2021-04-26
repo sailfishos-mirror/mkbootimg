@@ -108,10 +108,10 @@ int print_os_version(uint32_t hdr_os_ver)
 int usage()
 {
     printf("usage: unpackbootimg\n");
-    printf("\t-i|--input boot.img\n");
-    printf("\t[ -o|--output output_directory]\n");
+    printf("\t-i|--input <filename>\n");
+    printf("\t[ -o|--output <directory> ]\n");
     printf("\t[ -p|--pagesize <size-in-hexadecimal> ]\n");
-    if(debug>0){printf("\t[ -d|--debug <1|2> ]\n");}
+    if(debug>0){printf("\t[ -d|--debug <debug-level> ]\n");}
     return 1;
 }
 
@@ -138,7 +138,7 @@ int main(int argc, char **argv)
         } else if(!strcmp(arg, "--pagesize") || !strcmp(arg, "-p")) {
             pagesize = strtoul(val, 0, 16);
         } else if(!strcmp(arg, "--debug") || !strcmp(arg, "-d")) {
-            debug = atoi(val);
+            debug = strtoul(val, 0, 10);
         } else {
             return usage();
         }
@@ -321,7 +321,7 @@ int main(int argc, char **argv)
             // boot_img_hdr_v3 and above are no longer backwards compatible
 
             if (pagesize == 0) {
-                pagesize = 0x00001000; // page_size is hardcoded to 4096 in boot_img_hdr_v3
+                pagesize = 0x00001000; // page_size is hardcoded to 4096 in boot_img_hdr_v3 and above
             }
 
             printf("BOARD_KERNEL_CMDLINE %.*s\n", BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE, header.cmdline);
