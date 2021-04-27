@@ -56,45 +56,7 @@ oops:
     return 0;
 }
 
-int usage(void)
-{
-    fprintf(stderr,"usage: mkbootimg\n"
-            "       [ --kernel <filename> ]\n"
-            "       [ --ramdisk <filename> | --vendor_ramdisk <filename> ]\n"
-            "       [ --second <filename> ]\n"
-            "       [ --dtb <filename> ]\n"
-            "       [ --recovery_dtbo <filename> | --recovery_acpio <filename> ]\n"
-            "       [ --dt <filename> ]\n"
-            "       [ --cmdline <command line> | --vendor_cmdline <command line> ]\n"
-            "       [ --base <address> ]\n"
-            "       [ --kernel_offset <base offset> ]\n"
-            "       [ --ramdisk_offset <base offset> ]\n"
-            "       [ --second_offset <base offset> ]\n"
-            "       [ --tags_offset <base offset> ]\n"
-            "       [ --dtb_offset <base offset> ]\n"
-            "       [ --os_version <A.B.C version> ]\n"
-            "       [ --os_patch_level <YYYY-MM-DD date> ]\n"
-            "       [ --board <board name> ]\n"
-            "       [ --pagesize <pagesize> ]\n"
-            "       [ --header_version <version number> ]\n"
-            "       [ --hashtype <sha1(default)|sha256> ]\n"
-            "       [ --id ]\n"
-            "       -o|--output <filename> | --vendor_boot <filename>\n"
-            );
-    return 1;
-}
-
 static unsigned char padding[131072] = { 0, };
-
-static void print_id(const uint8_t *id, size_t id_len)
-{
-    printf("0x");
-    unsigned i = 0;
-    for(i = 0; i < id_len; i++) {
-        printf("%02x", id[i]);
-    }
-    printf("\n");
-}
 
 int write_padding(int fd, unsigned pagesize, unsigned itemsize)
 {
@@ -241,6 +203,45 @@ void generate_id(enum hash_alg alg, boot_img_hdr_v2 *hdr, void *kernel_data,
     }
 }
 
+static void print_id(const uint8_t *id, size_t id_len)
+{
+    printf("0x");
+    unsigned i = 0;
+    for(i = 0; i < id_len; i++) {
+        printf("%02x", id[i]);
+    }
+    printf("\n");
+}
+
+int usage(void)
+{
+    fprintf(stderr,
+        "usage: mkbootimg\n"
+        "\t[ --kernel <filename> ]\n"
+        "\t[ --ramdisk <filename> | --vendor_ramdisk <filename> ]\n"
+        "\t[ --second <filename> ]\n"
+        "\t[ --dtb <filename> ]\n"
+        "\t[ --recovery_dtbo <filename> | --recovery_acpio <filename> ]\n"
+        "\t[ --dt <filename> ]\n"
+        "\t[ --cmdline <command line> | --vendor_cmdline <command line> ]\n"
+        "\t[ --base <address> ]\n"
+        "\t[ --kernel_offset <base offset> ]\n"
+        "\t[ --ramdisk_offset <base offset> ]\n"
+        "\t[ --second_offset <base offset> ]\n"
+        "\t[ --tags_offset <base offset> ]\n"
+        "\t[ --dtb_offset <base offset> ]\n"
+        "\t[ --os_version <A.B.C version> ]\n"
+        "\t[ --os_patch_level <YYYY-MM-DD date> ]\n"
+        "\t[ --board <board name> ]\n"
+        "\t[ --pagesize <pagesize> ]\n"
+        "\t[ --header_version <version number> ]\n"
+        "\t[ --hashtype <sha1(default)|sha256> ]\n"
+        "\t[ --id ]\n"
+        "\t-o|--output <filename> | --vendor_boot <filename>\n"
+    );
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
     char *bootimg = NULL;
@@ -345,7 +346,7 @@ int main(int argc, char **argv)
                     && (pagesize != 8192) && (pagesize != 16384)
                     && (pagesize != 32768) && (pagesize != 65536)
                     && (pagesize != 131072)) {
-                    fprintf(stderr,"error: unsupported page size %d\n", pagesize);
+                    fprintf(stderr, "error: unsupported page size %d\n", pagesize);
                     return -1;
                 }
             } else if(!strcmp(arg, "--header_version")) {
@@ -365,20 +366,20 @@ int main(int argc, char **argv)
     }
 
     if(bootimg == NULL) {
-        fprintf(stderr,"error: no output filename specified\n");
+        fprintf(stderr, "error: no output filename specified\n");
         return usage();
     }
 
     fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
-        fprintf(stderr,"error: could not create '%s'\n", bootimg);
+        fprintf(stderr, "error: could not create '%s'\n", bootimg);
         return 1;
     }
 
     if(!vendor_boot) {
 
         if(kernel_fn == 0) {
-            fprintf(stderr,"error: no kernel image specified\n");
+            fprintf(stderr, "error: no kernel image specified\n");
             return usage();
         }
 
@@ -392,16 +393,16 @@ int main(int argc, char **argv)
 
             hdr.page_size = pagesize;
 
-            hdr.kernel_addr =  base + kernel_offset;
+            hdr.kernel_addr  = base + kernel_offset;
             hdr.ramdisk_addr = base + ramdisk_offset;
-            hdr.second_addr =  base + second_offset;
-            hdr.tags_addr =    base + tags_offset;
+            hdr.second_addr  = base + second_offset;
+            hdr.tags_addr    = base + tags_offset;
 
             hdr.header_version = header_version;
             hdr.os_version = (os_version << 11) | os_patch_level;
 
             if(strlen(board) >= BOOT_NAME_SIZE) {
-                fprintf(stderr,"error: board name too large\n");
+                fprintf(stderr, "error: board name too large\n");
                 return usage();
             }
             strcpy((char *)hdr.name, board);
@@ -414,13 +415,13 @@ int main(int argc, char **argv)
                 memcpy(hdr.cmdline, cmdline, BOOT_ARGS_SIZE);
                 strcpy((char *)hdr.extra_cmdline, cmdline+BOOT_ARGS_SIZE);
             } else {
-                fprintf(stderr,"error: kernel cmdline too large\n");
+                fprintf(stderr, "error: kernel cmdline too large\n");
                 return 1;
             }
 
             kernel_data = load_file(kernel_fn, &kernel_sz);
             if(kernel_data == 0) {
-                fprintf(stderr,"error: could not load kernel '%s'\n", kernel_fn);
+                fprintf(stderr, "error: could not load kernel '%s'\n", kernel_fn);
                 return 1;
             }
             hdr.kernel_size = kernel_sz;
@@ -430,7 +431,7 @@ int main(int argc, char **argv)
             } else {
                 ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
                 if(ramdisk_data == 0) {
-                    fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
+                    fprintf(stderr, "error: could not load ramdisk '%s'\n", ramdisk_fn);
                     return 1;
                 }
             }
@@ -439,7 +440,7 @@ int main(int argc, char **argv)
             if(second_fn) {
                 second_data = load_file(second_fn, &second_sz);
                 if(second_data == 0) {
-                    fprintf(stderr,"error: could not load secondstage '%s'\n", second_fn);
+                    fprintf(stderr, "error: could not load second '%s'\n", second_fn);
                     return 1;
                 }
             }
@@ -449,7 +450,7 @@ int main(int argc, char **argv)
                 if(dt_fn) {
                     dt_data = load_file(dt_fn, &dt_sz);
                     if((dt_data == 0) || (dt_sz == 0)) {
-                        fprintf(stderr,"error: could not load dt '%s'\n", dt_fn);
+                        fprintf(stderr, "error: could not load dt '%s'\n", dt_fn);
                         return 1;
                     }
                 }
@@ -458,20 +459,21 @@ int main(int argc, char **argv)
                 if(recovery_dtbo_fn) {
                     recovery_dtbo_data = load_file(recovery_dtbo_fn, &rec_dtbo_sz);
                     if((recovery_dtbo_data == 0) || (rec_dtbo_sz == 0)) {
-                        fprintf(stderr,"error: could not load recovery dtbo '%s'\n", recovery_dtbo_fn);
+                        fprintf(stderr, "error: could not load recovery dtbo/acpio '%s'\n", recovery_dtbo_fn);
                         return 1;
                     }
                     // header occupies a page
-                    rec_dtbo_offset = pagesize * (1 + \
-                                                  (kernel_sz + pagesize - 1) / pagesize + \
-                                                  (ramdisk_sz + pagesize - 1) / pagesize + \
-                                                  (second_sz + pagesize - 1) / pagesize);
+                    rec_dtbo_offset = pagesize * (1 +
+                        (kernel_sz + pagesize - 1) / pagesize +
+                        (ramdisk_sz + pagesize - 1) / pagesize +
+                        (second_sz + pagesize - 1) / pagesize
+                    );
                 }
                 if(header_version > 1) {
                     if(dtb_fn) {
                         dtb_data = load_file(dtb_fn, &dtb_sz);
                         if((dtb_data == 0) || (dtb_sz == 0)) {
-                            fprintf(stderr,"error: could not load dtb '%s'\n", dtb_fn);
+                            fprintf(stderr, "error: could not load dtb '%s'\n", dtb_fn);
                             return 1;
                         }
                     }
@@ -544,13 +546,13 @@ int main(int argc, char **argv)
             if(cmdlen <= BOOT_ARGS_SIZE + BOOT_EXTRA_ARGS_SIZE) {
                 strcpy((char *)hdr.cmdline, cmdline);
             } else {
-                fprintf(stderr,"error: kernel cmdline too large\n");
+                fprintf(stderr, "error: kernel cmdline too large\n");
                 return 1;
             }
 
             kernel_data = load_file(kernel_fn, &kernel_sz);
             if(kernel_data == 0) {
-                fprintf(stderr,"error: could not load kernel '%s'\n", kernel_fn);
+                fprintf(stderr, "error: could not load kernel '%s'\n", kernel_fn);
                 return 1;
             }
             hdr.kernel_size = kernel_sz;
@@ -560,7 +562,7 @@ int main(int argc, char **argv)
             } else {
                 ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
                 if(ramdisk_data == 0) {
-                    fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
+                    fprintf(stderr, "error: could not load ramdisk '%s'\n", ramdisk_fn);
                     return 1;
                 }
             }
@@ -590,15 +592,15 @@ int main(int argc, char **argv)
         hdr.header_version = header_version;
         hdr.page_size = pagesize;
 
-        hdr.kernel_addr =  base + kernel_offset;
+        hdr.kernel_addr  = base + kernel_offset;
         hdr.ramdisk_addr = base + ramdisk_offset;
-        hdr.tags_addr =    base + tags_offset;
-        hdr.dtb_addr =     base + dtb_offset;
+        hdr.tags_addr    = base + tags_offset;
+        hdr.dtb_addr     = base + dtb_offset;
 
         hdr.header_size = sizeof(hdr);
 
         if(strlen(board) >= VENDOR_BOOT_NAME_SIZE) {
-            fprintf(stderr,"error: board name too large\n");
+            fprintf(stderr, "error: board name too large\n");
             return usage();
         }
         strcpy((char *)hdr.name, board);
@@ -607,7 +609,7 @@ int main(int argc, char **argv)
         if(cmdlen <= VENDOR_BOOT_ARGS_SIZE) {
             strcpy((char *)hdr.cmdline, cmdline);
         } else {
-            fprintf(stderr,"error: vendor cmdline too large\n");
+            fprintf(stderr, "error: vendor cmdline too large\n");
             return 1;
         }
 
@@ -616,7 +618,7 @@ int main(int argc, char **argv)
         } else {
             ramdisk_data = load_file(ramdisk_fn, &ramdisk_sz);
             if((ramdisk_data == 0) || (ramdisk_sz == 0)) {
-                fprintf(stderr,"error: could not load ramdisk '%s'\n", ramdisk_fn);
+                fprintf(stderr, "error: could not load vendor ramdisk '%s'\n", ramdisk_fn);
                 return 1;
             }
         }
@@ -627,7 +629,7 @@ int main(int argc, char **argv)
         } else {
             dtb_data = load_file(dtb_fn, &dtb_sz);
             if((dtb_data == 0) || (dtb_sz == 0)) {
-                fprintf(stderr,"error: could not load dtb '%s'\n", dtb_fn);
+                fprintf(stderr, "error: could not load dtb '%s'\n", dtb_fn);
                 return 1;
             }
         }
@@ -648,6 +650,6 @@ int main(int argc, char **argv)
 fail:
     unlink(bootimg);
     close(fd);
-    fprintf(stderr,"error: failed writing '%s': %s\n", bootimg, strerror(errno));
+    fprintf(stderr, "error: failed writing '%s': %s\n", bootimg, strerror(errno));
     return 1;
 }

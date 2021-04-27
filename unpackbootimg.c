@@ -37,7 +37,7 @@ int read_padding(FILE *f, unsigned itemsize)
     count = pagesize - (itemsize & pagemask);
     if(fread(buf, count, 1, f)){};
     free(buf);
-    if(debug>1){printf("read padding: %d\n", count);}
+    if(debug>1){fprintf(stderr, "read padding: %d\n", count);}
     return count;
 }
 
@@ -46,7 +46,7 @@ void write_string_to_file(const char *name, const char *string)
     char file[PATH_MAX];
     sprintf(file, "%s/%s-%s", directory, basename(filename), name);
     FILE *t = fopen(file, "w");
-    if(debug>0){printf("%s...\n", name);}
+    if(debug>0){fprintf(stderr, "%s...\n", name);}
     fwrite(string, strlen(string), 1, t);
     fwrite("\n", 1, 1, t);
     fclose(t);
@@ -58,10 +58,10 @@ void write_buffer_to_file(const char *name, FILE *f, const int size)
     sprintf(file, "%s/%s-%s", directory, basename(filename), name);
     FILE *t = fopen(file, "wb");
     byte *buf = (byte *)malloc(size);
-    if(debug>0){printf("Reading %s...\n", name);}
+    if(debug>0){fprintf(stderr, "Reading %s...\n", name);}
     if(fread(buf, size, 1, f)){};
     total_read += size;
-    if(debug>1){printf("read: %d\n", size);}
+    if(debug>1){fprintf(stderr, "read: %d\n", size);}
     fwrite(buf, size, 1, t);
     fclose(t);
     free(buf);
@@ -105,13 +105,15 @@ int print_os_version(uint32_t hdr_os_ver)
     return 1;
 }
 
-int usage()
+int usage(void)
 {
-    printf("usage: unpackbootimg\n");
-    printf("\t-i|--input <filename>\n");
-    printf("\t[ -o|--output <directory> ]\n");
-    printf("\t[ -p|--pagesize <size-in-hexadecimal> ]\n");
-    if(debug>0){printf("\t[ -d|--debug <debug-level> ]\n");}
+    fprintf(stderr,
+        "usage: unpackbootimg\n"
+        "\t-i|--input <filename>\n"
+        "\t[ -o|--output <directory> ]\n"
+        "\t[ -p|--pagesize <size-in-hexadecimal> ]\n"
+    );
+    if(debug>0){fprintf(stderr, "\t[ -d|--debug <debug-level> ]\n");}
     return 1;
 }
 
@@ -150,21 +152,21 @@ int main(int argc, char **argv)
 
     struct stat st;
     if (stat(directory, &st) == (-1)) {
-        printf("Could not stat %s: %s\n", directory, strerror(errno));
+        fprintf(stderr, "Could not stat %s: %s\n", directory, strerror(errno));
         return 1;
     }
     if (!S_ISDIR(st.st_mode)) {
-        printf("%s is not a directory\n", directory);
+        fprintf(stderr, "%s is not a directory\n", directory);
         return 1;
     }
 
     FILE *f = fopen(filename, "rb");
     if (!f) {
-        printf("Could not open input file: %s\n", strerror(errno));
+        fprintf(stderr, "Could not open input file: %s\n", strerror(errno));
         return 1;
     }
 
-    if(debug>0){printf("Reading header...\n");}
+    if(debug>0){fprintf(stderr, "Reading header...\n");}
     int i;
     for (i = 0; i <= seeklimit; i++) {
         fseek(f, i, SEEK_SET);
@@ -180,7 +182,7 @@ int main(int argc, char **argv)
     }
     total_read = i;
     if (i > seeklimit) {
-        printf("Boot image magic not found.\n");
+        fprintf(stderr, "Boot image magic not found.\n");
         return 1;
     }
     printf("%s magic found at: %d\n", magic, i);
@@ -296,7 +298,7 @@ int main(int argc, char **argv)
             write_string_to_file("hashtype", hash_type);
 
             total_read += sizeof(header);
-            if(debug>1){printf("read: %ld\n", sizeof(header));} // this will always show 1660 here since it uses boot_img_hdr_v2
+            if(debug>1){fprintf(stderr, "read: %ld\n", sizeof(header));} // this will always show 1660 here since it uses boot_img_hdr_v2
             total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
@@ -348,7 +350,7 @@ int main(int argc, char **argv)
             write_string_to_file("header_version", hdrvertmp);
 
             total_read += sizeof(header);
-            if(debug>1){printf("read: %ld\n", sizeof(header));}
+            if(debug>1){fprintf(stderr, "read: %ld\n", sizeof(header));}
             total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
@@ -415,7 +417,7 @@ int main(int argc, char **argv)
         write_string_to_file("dtb_offset", dtbofftmp);
 
         total_read += sizeof(header);
-        if(debug>1){printf("read: %ld\n", sizeof(header));}
+        if(debug>1){fprintf(stderr, "read: %ld\n", sizeof(header));}
         total_read += read_padding(f, sizeof(header));
 
         write_buffer_to_file("vendor_ramdisk", f, header.vendor_ramdisk_size);
@@ -425,6 +427,6 @@ int main(int argc, char **argv)
 
     fclose(f);
 
-    if(debug>0){printf("Total Read: %d\n", total_read);}
+    if(debug>0){fprintf(stderr, "Total Read: %d\n", total_read);}
     return 0;
 }
