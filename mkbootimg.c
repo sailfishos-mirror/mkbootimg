@@ -71,8 +71,9 @@ int parse_os_version(char *ver)
     int a = 0, b = 0, c = 0;
     int i = sscanf(ver, "%u.%u.%u", &a, &b, &c);
 
-    if((i >= 1) && (a < 128) && (b < 128) && (c < 128))
+    if((i >= 1) && (a < 128) && (b < 128) && (c < 128)) {
         return (a << 14) | (b << 7) | c;
+    }
     return 0;
 }
 
@@ -82,8 +83,9 @@ int parse_os_patch_level(char *lvl)
     int i = sscanf(lvl, "%u-%u", &y, &m);
     y -= 2000;
 
-    if((i == 2) && (y >= 0) && (y < 128) && (m > 0) && (m <= 12))
+    if((i == 2) && (y >= 0) && (y < 128) && (m > 0) && (m <= 12)) {
         return (y << 4) | m;
+    }
     return 0;
 }
 
@@ -109,8 +111,9 @@ enum hash_alg parse_hash_alg(char *name)
     const struct hash_name *ptr = hash_names;
 
     while(ptr->name) {
-        if(!strcmp(ptr->name, name))
+        if(!strcmp(ptr->name, name)) {
             return ptr->alg;
+        }
         ptr++;
     }
     return HASH_UNKNOWN;
@@ -271,7 +274,7 @@ int main(int argc, char **argv)
 
     argc--;
     argv++;
-    while(argc > 0){
+    while(argc > 0) {
         char *arg = argv[0];
         if(!strcmp(arg, "--id")) {
             show_id = true;
@@ -346,6 +349,7 @@ int main(int argc, char **argv)
                 return usage();
             }
         } else {
+            fprintf(stderr, "error: not enough arguments '%s'\n", arg);
             return usage();
         }
     }
