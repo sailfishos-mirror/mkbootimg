@@ -28,19 +28,14 @@
 
 static void *load_file(const char *fn, unsigned *_sz)
 {
-    char *data;
-    int sz;
-    int fd;
-
-    data = 0;
-    fd = open(fn, O_RDONLY);
+    int fd = open(fn, O_RDONLY);
     if(fd < 0) return 0;
 
-    sz = lseek(fd, 0, SEEK_END);
+    int sz = lseek(fd, 0, SEEK_END);
     if(sz < 0) goto oops;
-
     if(lseek(fd, 0, SEEK_SET) != 0) goto oops;
 
+    char *data = 0;
     data = (char *)malloc(sz);
     if(data == 0) goto oops;
 
@@ -63,25 +58,18 @@ int write_padding(int fd, unsigned pagesize, unsigned itemsize)
     unsigned pagemask = pagesize - 1;
     ssize_t count;
 
-    if((itemsize & pagemask) == 0) {
-        return 0;
-    }
+    if((itemsize & pagemask) == 0) return 0;
 
     count = pagesize - (itemsize & pagemask);
 
-    if(write(fd, padding, count) != count) {
-        return -1;
-    } else {
-        return 0;
-    }
+    if(write(fd, padding, count) != count) return -1;
+    return 0;
 }
 
 int parse_os_version(char *ver)
 {
     int a = 0, b = 0, c = 0;
-    int i;
-
-    i = sscanf(ver, "%u.%u.%u", &a, &b, &c);
+    int i = sscanf(ver, "%u.%u.%u", &a, &b, &c);
 
     if((i >= 1) && (a < 128) && (b < 128) && (c < 128))
         return (a << 14) | (b << 7) | c;
@@ -91,9 +79,7 @@ int parse_os_version(char *ver)
 int parse_os_patch_level(char *lvl)
 {
     int y = 0, m = 0;
-    int i;
-
-    i = sscanf(lvl, "%u-%u", &y, &m);
+    int i = sscanf(lvl, "%u-%u", &y, &m);
     y -= 2000;
 
     if((i == 2) && (y >= 0) && (y < 128) && (m > 0) && (m <= 12))
@@ -127,7 +113,6 @@ enum hash_alg parse_hash_alg(char *name)
             return ptr->alg;
         ptr++;
     }
-
     return HASH_UNKNOWN;
 }
 
@@ -262,23 +247,22 @@ int main(int argc, char **argv)
     int os_version = 0;
     int os_patch_level = 0;
     int header_version = 0;
-    uint32_t pagesize = 2048;
-    uint32_t base           = 0x10000000U;
-    uint32_t kernel_offset  = 0x00008000U;
-    uint32_t ramdisk_offset = 0x01000000U;
-    uint32_t second_offset  = 0x00f00000U;
-    uint32_t tags_offset    = 0x00000100U;
-    uint64_t dtb_offset     = 0x01f00000U;
-    uint32_t kernel_sz      = 0;
-    uint32_t ramdisk_sz     = 0;
-    uint32_t second_sz      = 0;
-    uint32_t dtb_sz         = 0;
-    uint32_t rec_dtbo_sz    = 0;
-    uint64_t rec_dtbo_offset= 0;
-    uint32_t dt_sz          = 0;
-    uint32_t header_sz      = 0;
+    uint32_t pagesize        = 2048;
+    uint32_t base            = 0x10000000U;
+    uint32_t kernel_offset   = 0x00008000U;
+    uint32_t ramdisk_offset  = 0x01000000U;
+    uint32_t second_offset   = 0x00f00000U;
+    uint32_t tags_offset     = 0x00000100U;
+    uint64_t dtb_offset      = 0x01f00000U;
+    uint64_t rec_dtbo_offset = 0;
+    uint32_t kernel_sz       = 0;
+    uint32_t ramdisk_sz      = 0;
+    uint32_t second_sz       = 0;
+    uint32_t dtb_sz          = 0;
+    uint32_t rec_dtbo_sz     = 0;
+    uint32_t dt_sz           = 0;
+    uint32_t header_sz       = 0;
 
-    int fd;
     size_t cmdlen;
     enum hash_alg hash_alg = HASH_SHA1;
 
@@ -370,7 +354,7 @@ int main(int argc, char **argv)
         return usage();
     }
 
-    fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+    int fd = open(bootimg, O_CREAT | O_TRUNC | O_WRONLY, 0644);
     if(fd < 0) {
         fprintf(stderr, "error: could not create '%s'\n", bootimg);
         return 1;
