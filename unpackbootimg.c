@@ -285,7 +285,7 @@ int main(int argc, char **argv)
 
             if(header.header_version <= hdr_ver_max) {
                 char hdrvertmp[200];
-                sprintf(hdrvertmp, "%d\n", header.header_version);
+                sprintf(hdrvertmp, "%d\n", header.header_version); // extra newline to prevent some file editors from interpreting a 2-byte file as Unicode
                 write_string_to_file("header_version", hdrvertmp);
 
                 if(header.header_version > 1) {
@@ -346,7 +346,7 @@ int main(int argc, char **argv)
             write_string_to_file("os_patch_level", oslvltmp);
 
             char hdrvertmp[200];
-            sprintf(hdrvertmp, "%d\n", header.header_version);
+            sprintf(hdrvertmp, "%d\n", header.header_version); // extra newline to prevent some file editors from interpreting a 2-byte file as Unicode
             write_string_to_file("header_version", hdrvertmp);
 
             total_read += sizeof(header);
@@ -409,7 +409,7 @@ int main(int argc, char **argv)
         write_string_to_file("tags_offset", tagsofftmp);
 
         char hdrvertmp[200];
-        sprintf(hdrvertmp, "%d\n", header.header_version);
+        sprintf(hdrvertmp, "%d\n", header.header_version); // extra newline to prevent some file editors from interpreting a 2-byte file as Unicode
         write_string_to_file("header_version", hdrvertmp);
 
         char dtbofftmp[200];
