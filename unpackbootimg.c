@@ -35,9 +35,9 @@ int read_padding(FILE *f, unsigned itemsize)
         return 0;
     }
     count = pagesize - (itemsize & pagemask);
-    if(fread(buf, count, 1, f)){};
+    if(fread(buf, count, 1, f)) {};
     free(buf);
-    if(debug>1){fprintf(stderr, "read padding: %d\n", count);}
+    if(debug > 1) fprintf(stderr, "read padding: %d\n", count);
     return count;
 }
 
@@ -46,7 +46,7 @@ void write_string_to_file(const char *name, const char *string)
     char file[PATH_MAX];
     sprintf(file, "%s/%s-%s", directory, basename(filename), name);
     FILE *t = fopen(file, "w");
-    if(debug>0){fprintf(stderr, "%s...\n", name);}
+    if(debug > 0) fprintf(stderr, "%s...\n", name);
     fwrite(string, strlen(string), 1, t);
     fwrite("\n", 1, 1, t);
     fclose(t);
@@ -58,10 +58,10 @@ void write_buffer_to_file(const char *name, FILE *f, const int size)
     sprintf(file, "%s/%s-%s", directory, basename(filename), name);
     FILE *t = fopen(file, "wb");
     byte *buf = (byte *)malloc(size);
-    if(debug>0){fprintf(stderr, "Reading %s...\n", name);}
-    if(fread(buf, size, 1, f)){};
+    if(debug > 0) fprintf(stderr, "Reading %s...\n", name);
+    if(fread(buf, size, 1, f)) {};
     total_read += size;
-    if(debug>1){fprintf(stderr, "read: %d\n", size);}
+    if(debug > 1) fprintf(stderr, "read: %d\n", size);
     fwrite(buf, size, 1, t);
     fclose(t);
     free(buf);
@@ -75,8 +75,8 @@ const char *detect_hash_type(boot_img_hdr_v2 *hdr)
     uint8_t id[SHA256_DIGEST_SIZE];
     memcpy(&id, hdr->id, sizeof(id));
     int i;
-    for (i = SHA_DIGEST_SIZE + 4; i < SHA256_DIGEST_SIZE; ++i) {
-        if (id[i]) {
+    for(i = SHA_DIGEST_SIZE + 4; i < SHA256_DIGEST_SIZE; ++i) {
+        if(id[i]) {
             return "sha256";
         }
     }
@@ -85,7 +85,7 @@ const char *detect_hash_type(boot_img_hdr_v2 *hdr)
 
 int print_os_version(uint32_t hdr_os_ver)
 {
-    if (hdr_os_ver != 0) {
+    if(hdr_os_ver != 0) {
         int os_version = 0, os_patch_level = 0;
         os_version = hdr_os_ver >> 11;
         os_patch_level = hdr_os_ver&0x7ff;
@@ -97,7 +97,7 @@ int print_os_version(uint32_t hdr_os_ver)
         y = (os_patch_level >> 4) + 2000;
         m = os_patch_level&0xf;
     }
-    if ((a < 128) && (b < 128) && (c < 128) && (y >= 2000) && (y < 2128) && (m > 0) && (m <= 12)) {
+    if((a < 128) && (b < 128) && (c < 128) && (y >= 2000) && (y < 2128) && (m > 0) && (m <= 12)) {
         printf("BOARD_OS_VERSION %d.%d.%d\n", a, b, c);
         printf("BOARD_OS_PATCH_LEVEL %d-%02d\n", y, m);
         return 0;
@@ -113,7 +113,7 @@ int usage(void)
         "\t[ -o|--output <directory> ]\n"
         "\t[ -p|--pagesize <size-in-hexadecimal> ]\n"
     );
-    if(debug>0){fprintf(stderr, "\t[ -d|--debug <debug-level> ]\n");}
+    if(debug > 0) fprintf(stderr, "\t[ -d|--debug <debug-level> ]\n");
     return 1;
 }
 
@@ -128,7 +128,7 @@ int main(int argc, char **argv)
 
     argc--;
     argv++;
-    while(argc > 0){
+    while(argc > 0) {
         char *arg = argv[0];
         char *val = argv[1];
         argc -= 2;
@@ -146,42 +146,42 @@ int main(int argc, char **argv)
         }
     }
 
-    if (filename == NULL) {
+    if(filename == NULL) {
         return usage();
     }
 
     struct stat st;
-    if (stat(directory, &st) == (-1)) {
+    if(stat(directory, &st) == (-1)) {
         fprintf(stderr, "Could not stat %s: %s\n", directory, strerror(errno));
         return 1;
     }
-    if (!S_ISDIR(st.st_mode)) {
+    if(!S_ISDIR(st.st_mode)) {
         fprintf(stderr, "%s is not a directory\n", directory);
         return 1;
     }
 
     FILE *f = fopen(filename, "rb");
-    if (!f) {
+    if(!f) {
         fprintf(stderr, "Could not open input file: %s\n", strerror(errno));
         return 1;
     }
 
-    if(debug>0){fprintf(stderr, "Reading header...\n");}
+    if(debug > 0) fprintf(stderr, "Reading header...\n");
     int i;
-    for (i = 0; i <= seeklimit; i++) {
+    for(i = 0; i <= seeklimit; i++) {
         fseek(f, i, SEEK_SET);
-        if(fread(tmp, BOOT_MAGIC_SIZE, 1, f)){};
-        if (memcmp(tmp, BOOT_MAGIC, BOOT_MAGIC_SIZE) == 0) {
+        if(fread(tmp, BOOT_MAGIC_SIZE, 1, f)) {};
+        if(memcmp(tmp, BOOT_MAGIC, BOOT_MAGIC_SIZE) == 0) {
             magic = BOOT_MAGIC;
             break;
         }
-        if (memcmp(tmp, VENDOR_BOOT_MAGIC, VENDOR_BOOT_MAGIC_SIZE) == 0) {
+        if(memcmp(tmp, VENDOR_BOOT_MAGIC, VENDOR_BOOT_MAGIC_SIZE) == 0) {
             magic = VENDOR_BOOT_MAGIC;
             break;
         }
     }
     total_read = i;
-    if (i > seeklimit) {
+    if(i > seeklimit) {
         fprintf(stderr, "Boot image magic not found.\n");
         return 1;
     }
@@ -189,18 +189,18 @@ int main(int argc, char **argv)
 
     boot_img_hdr_v3 header;
     fseek(f, i, SEEK_SET);
-    if(fread(&header, sizeof(header), 1, f)){};
+    if(fread(&header, sizeof(header), 1, f)) {};
 
-    if (magic == BOOT_MAGIC) {
-        if ((header.header_version < 3) || (header.header_version > hdr_ver_max)) {
+    if(magic == BOOT_MAGIC) {
+        if((header.header_version < 3) || (header.header_version > hdr_ver_max)) {
             // boot_img_hdr_v2 in the backported header supports all boot_img_hdr versions and cross-compatible variants below 3
 
             fseek(f, i, SEEK_SET);
             boot_img_hdr_v2 header;
-            if(fread(&header, sizeof(header), 1, f)){};
+            if(fread(&header, sizeof(header), 1, f)) {};
 
             base = header.kernel_addr - 0x00008000;
-            if (pagesize == 0) {
+            if(pagesize == 0) {
                 pagesize = header.page_size;
             }
             const char *hash_type = detect_hash_type(&header);
@@ -214,17 +214,17 @@ int main(int argc, char **argv)
             printf("BOARD_RAMDISK_OFFSET 0x%08x\n", header.ramdisk_addr - base);
             printf("BOARD_SECOND_OFFSET 0x%08x\n", header.second_addr - base);
             printf("BOARD_TAGS_OFFSET 0x%08x\n", header.tags_addr - base);
-            if (print_os_version(header.os_version) == 1) {
+            if(print_os_version(header.os_version) == 1) {
                 header.os_version = 0;
             }
-            if (header.dt_size > hdr_ver_max) {
+            if(header.dt_size > hdr_ver_max) {
                 printf("BOARD_DT_SIZE %d\n", header.dt_size);
             } else {
                 printf("BOARD_HEADER_VERSION %d\n", header.header_version);
             }
-            if (header.header_version <= hdr_ver_max) {
-                if (header.header_version > 0) {
-                    if (header.recovery_dtbo_size != 0) {
+            if(header.header_version <= hdr_ver_max) {
+                if(header.header_version > 0) {
+                    if(header.recovery_dtbo_size != 0) {
                         printf("BOARD_RECOVERY_DTBO_SIZE %d\n", header.recovery_dtbo_size);
                         printf("BOARD_RECOVERY_DTBO_OFFSET %"PRId64"\n", header.recovery_dtbo_offset);
                     }
@@ -232,8 +232,8 @@ int main(int argc, char **argv)
                 } else {
                     header.recovery_dtbo_size = 0;
                 }
-                if (header.header_version > 1) {
-                    if (header.dtb_size != 0) {
+                if(header.header_version > 1) {
+                    if(header.dtb_size != 0) {
                         printf("BOARD_DTB_SIZE %d\n", header.dtb_size);
                         printf("BOARD_DTB_OFFSET 0x%08"PRIx64"\n", header.dtb_addr - base);
                     }
@@ -273,7 +273,7 @@ int main(int argc, char **argv)
             sprintf(tagsofftmp, "0x%08x", header.tags_addr - base);
             write_string_to_file("tags_offset", tagsofftmp);
 
-            if (header.os_version != 0) {
+            if(header.os_version != 0) {
                 char osvertmp[200];
                 sprintf(osvertmp, "%d.%d.%d", a, b, c);
                 write_string_to_file("os_version", osvertmp);
@@ -283,12 +283,12 @@ int main(int argc, char **argv)
                 write_string_to_file("os_patch_level", oslvltmp);
             }
 
-            if (header.header_version <= hdr_ver_max) {
+            if(header.header_version <= hdr_ver_max) {
                 char hdrvertmp[200];
                 sprintf(hdrvertmp, "%d\n", header.header_version);
                 write_string_to_file("header_version", hdrvertmp);
 
-                if (header.header_version > 1) {
+                if(header.header_version > 1) {
                     char dtbofftmp[200];
                     sprintf(dtbofftmp, "0x%08"PRIx64, header.dtb_addr - base);
                     write_string_to_file("dtb_offset", dtbofftmp);
@@ -298,31 +298,31 @@ int main(int argc, char **argv)
             write_string_to_file("hashtype", hash_type);
 
             total_read += sizeof(header);
-            if(debug>1){fprintf(stderr, "read: %ld\n", sizeof(header));} // this will always show 1660 here since it uses boot_img_hdr_v2
+            if(debug > 1) fprintf(stderr, "read: %ld\n", sizeof(header)); // this will harmlessly always show 1660 since it uses boot_img_hdr_v2 for all < v3
             total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
 
             write_buffer_to_file("ramdisk", f, header.ramdisk_size);
 
-            if (header.second_size != 0) {
+            if(header.second_size != 0) {
                 write_buffer_to_file("second", f, header.second_size);
             }
 
-            if (header.dt_size > hdr_ver_max) {
+            if(header.dt_size > hdr_ver_max) {
                 write_buffer_to_file("dt", f, header.dt_size);
             } else {
-                if (header.recovery_dtbo_size != 0) {
+                if(header.recovery_dtbo_size != 0) {
                     write_buffer_to_file("recovery_dtbo", f, header.recovery_dtbo_size);
                 }
-                if (header.dtb_size != 0) {
+                if(header.dtb_size != 0) {
                     write_buffer_to_file("dtb", f, header.dtb_size);
                 }
             }
         } else {
             // boot_img_hdr_v3 and above are no longer backwards compatible
 
-            if (pagesize == 0) {
+            if(pagesize == 0) {
                 pagesize = 0x00001000; // page_size is hardcoded to 4096 in boot_img_hdr_v3 and above
             }
 
@@ -350,7 +350,7 @@ int main(int argc, char **argv)
             write_string_to_file("header_version", hdrvertmp);
 
             total_read += sizeof(header);
-            if(debug>1){fprintf(stderr, "read: %ld\n", sizeof(header));}
+            if(debug > 1) fprintf(stderr, "read: %ld\n", sizeof(header));
             total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
@@ -362,10 +362,10 @@ int main(int argc, char **argv)
 
         fseek(f, i, SEEK_SET);
         vendor_boot_img_hdr_v3 header;
-        if(fread(&header, sizeof(header), 1, f)){};
+        if(fread(&header, sizeof(header), 1, f)) {};
 
         base = header.kernel_addr - 0x00008000;
-        if (pagesize == 0) {
+        if(pagesize == 0) {
             pagesize = header.page_size;
         }
 
@@ -417,7 +417,7 @@ int main(int argc, char **argv)
         write_string_to_file("dtb_offset", dtbofftmp);
 
         total_read += sizeof(header);
-        if(debug>1){fprintf(stderr, "read: %ld\n", sizeof(header));}
+        if(debug > 1) fprintf(stderr, "read: %ld\n", sizeof(header));
         total_read += read_padding(f, sizeof(header));
 
         write_buffer_to_file("vendor_ramdisk", f, header.vendor_ramdisk_size);
@@ -427,6 +427,6 @@ int main(int argc, char **argv)
 
     fclose(f);
 
-    if(debug>0){fprintf(stderr, "Total Read: %d\n", total_read);}
+    if(debug > 0) fprintf(stderr, "Total Read: %d\n", total_read);
     return 0;
 }
