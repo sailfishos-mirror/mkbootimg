@@ -298,7 +298,7 @@ int main(int argc, char **argv)
             write_string_to_file("hashtype", hash_type);
 
             total_read += sizeof(header);
-            if(debug > 1) fprintf(stderr, "read: %ld\n", sizeof(header)); // this will harmlessly always show 1660 since it uses boot_img_hdr_v2 for all < v3
+            if(debug > 1) fprintf(stderr, "read: %d\n", total_read); // this will harmlessly always show 1660 since it uses boot_img_hdr_v2 for all < v3
             total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
@@ -350,7 +350,7 @@ int main(int argc, char **argv)
             write_string_to_file("header_version", hdrvertmp);
 
             total_read += sizeof(header);
-            if(debug > 1) fprintf(stderr, "read: %ld\n", sizeof(header));
+            if(debug > 1) fprintf(stderr, "read: %d\n", total_read);
             total_read += read_padding(f, sizeof(header));
 
             write_buffer_to_file("kernel", f, header.kernel_size);
@@ -417,7 +417,7 @@ int main(int argc, char **argv)
         write_string_to_file("dtb_offset", dtbofftmp);
 
         total_read += sizeof(header);
-        if(debug > 1) fprintf(stderr, "read: %ld\n", sizeof(header));
+        if(debug > 1) fprintf(stderr, "read: %d\n", total_read);
         total_read += read_padding(f, sizeof(header));
 
         write_buffer_to_file("vendor_ramdisk", f, header.vendor_ramdisk_size);
