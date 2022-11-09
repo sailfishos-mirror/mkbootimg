@@ -1,52 +1,52 @@
-# Andrew Huang <bluedrum@163.com>
 ifeq ($(CC),cc)
 CC = gcc
 endif
-AR = ar rcv
+AR = ar rc
 ifeq ($(windir),)
-EXE =
+EXT =
 RM = rm -f
+CP = cp
 else
-EXE = .exe
+EXT = .exe
 RM = del
+CP = copy /y
 endif
 
-CFLAGS = -ffunction-sections -O3
+CFLAGS += -ffunction-sections -O3
+
+INC = -I.
 
 ifneq (,$(findstring darwin,$(CROSS_COMPILE)))
-    UNAME_S := Darwin
+	UNAME_S := Darwin
 else
-    UNAME_S := $(shell uname -s)
+	UNAME_S := $(shell uname -s)
 endif
 ifeq ($(UNAME_S),Darwin)
-    LDFLAGS += -Wl,-dead_strip
+	LDFLAGS += -Wl,-dead_strip
 else
-    LDFLAGS += -Wl,--gc-sections -s
+	LDFLAGS += -Wl,--gc-sections -s
 endif
 
-all:mkbootimg$(EXE) unpackbootimg$(EXE)
+all:mkbootimg$(EXT) unpackbootimg$(EXT)
 
 static:
-	$(MAKE) LDFLAGS="$(LDFLAGS) -static"
+	$(MAKE) CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS) -static"
 
 libmincrypt.a:
-	$(MAKE) -C libmincrypt
+	$(MAKE) CFLAGS="$(CFLAGS)" -C libmincrypt
 
-mkbootimg$(EXE):mkbootimg.o libmincrypt.a
+mkbootimg$(EXT):mkbootimg.o libmincrypt.a
 	$(CROSS_COMPILE)$(CC) -o $@ $^ -L. -lmincrypt $(LDFLAGS)
 
-mkbootimg.o:mkbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -I. -Werror
-
-unpackbootimg$(EXE):unpackbootimg.o
+unpackbootimg$(EXT):unpackbootimg.o
 	$(CROSS_COMPILE)$(CC) -o $@ $^ $(LDFLAGS)
 
-unpackbootimg.o:unpackbootimg.c
-	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< -Werror
+%.o:%.c
+	$(CROSS_COMPILE)$(CC) -o $@ $(CFLAGS) -c $< $(INC) -Werror
 
 install:
-	install -m 755 unpackbootimg $(PREFIX)/bin
-	install -m 755 mkbootimg $(PREFIX)/bin
+	install -m 755 mkbootimg$(EXT) $(PREFIX)/bin
+	install -m 755 unpackbootimg$(EXT) $(PREFIX)/bin
 
 clean:
 	$(RM) mkbootimg unpackbootimg
