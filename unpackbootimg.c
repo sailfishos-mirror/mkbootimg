@@ -109,9 +109,9 @@ int usage(void)
 {
     fprintf(stderr,
         "usage: unpackbootimg\n"
-        "\t-i|--input <filename>\n"
-        "\t[ -o|--output <directory> ]\n"
-        "\t[ -p|--pagesize <size-in-hexadecimal> ]\n"
+        "\t-i, --input <filename>\n"
+        "\t[ -o, --output <directory> | -h, --header-only ]\n"
+        "\t[ -p, --pagesize <size-in-hexadecimal> ]\n"
     );
     if(debug > 0) fprintf(stderr, "\t[ -d|--debug <debug-level> ]\n");
     return 1;
@@ -122,6 +122,8 @@ int main(int argc, char **argv)
     char tmp[BOOT_MAGIC_SIZE];
     char *magic = NULL;
     int base = 0;
+
+    int headeronly = 0;
 
     int seeklimit = 65536; // arbitrary byte limit to search in input file for ANDROID!/VNDRBOOT magic
     int hdr_ver_max = 8; // arbitrary maximum header version value; when greater assume the field is appended dt size
@@ -139,6 +141,8 @@ int main(int argc, char **argv)
             directory = val;
         } else if(!strcmp(arg, "--pagesize") || !strcmp(arg, "-p")) {
             pagesize = strtoul(val, 0, 16);
+        } else if(!strcmp(arg, "--header-only") || !strcmp(arg, "-h")) {
+            headeronly = 1;
         } else if(!strcmp(arg, "--debug") || !strcmp(arg, "-d")) {
             debug = strtoul(val, 0, 10);
         } else {
@@ -241,6 +245,7 @@ int main(int argc, char **argv)
                     header.dtb_size = 0;
                 }
             }
+            if(headeronly == 1) return 0;
 
             char cmdlinetmp[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE+1];
             sprintf(cmdlinetmp, "%.*s%.*s", BOOT_ARGS_SIZE, header.cmdline, BOOT_EXTRA_ARGS_SIZE, header.extra_cmdline);
@@ -331,6 +336,7 @@ int main(int argc, char **argv)
             print_os_version(header.os_version);
             printf("BOARD_HEADER_VERSION %d\n", header.header_version);
             printf("BOARD_HEADER_SIZE %d\n", header.header_size);
+            if(headeronly == 1) return 0;
 
             char cmdlinetmp[BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE+1];
             sprintf(cmdlinetmp, "%.*s", BOOT_ARGS_SIZE+BOOT_EXTRA_ARGS_SIZE, header.cmdline);
@@ -380,6 +386,7 @@ int main(int argc, char **argv)
         printf("BOARD_HEADER_SIZE %d\n", header.header_size);
         printf("BOARD_DTB_SIZE %d\n", header.dtb_size);
         printf("BOARD_DTB_OFFSET 0x%08"PRIx64"\n", header.dtb_addr - base);
+        if(headeronly == 1) return 0;
 
         char cmdlinetmp[VENDOR_BOOT_ARGS_SIZE+1];
         sprintf(cmdlinetmp, "%.*s", VENDOR_BOOT_ARGS_SIZE, header.cmdline);
