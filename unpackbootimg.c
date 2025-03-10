@@ -109,9 +109,9 @@ int usage(void)
 {
     fprintf(stderr,
         "usage: unpackbootimg\n"
-        "\t-i, --input <filename>\n"
-        "\t[ -o, --output <directory> | -h, --header-only ]\n"
-        "\t[ -p, --pagesize <size-in-hexadecimal> ]\n"
+        "\t-i|--input <filename>\n"
+        "\t[ -o|--output <directory> | -h|--header-only ]\n"
+        "\t[ -p|--pagesize <size-in-hexadecimal> ]\n"
     );
     if(debug > 0) fprintf(stderr, "\t[ -d|--debug <debug-level> ]\n");
     return 1;
